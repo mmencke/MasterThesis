@@ -16,5 +16,7 @@
 
 #include <ql/quantlib.hpp>
 
+using namespace QuantLib;
+
 
 #endif /* headers_hpp */

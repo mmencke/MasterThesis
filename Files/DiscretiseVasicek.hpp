@@ -6,20 +6,15 @@
 //  Copyright © 2021 Magnus Mencke. All rights reserved.
 //
 
-#ifndef SimulateVasicek_hpp
-#define SimulateVasicek_hpp
+#ifndef DiscretiseVasicek_hpp
+#define DiscretiseVasicek_hpp
+
+
+#include "headers.hpp"
 
 
 
-#include <iostream>
-#include <ql/models/shortrate/onefactormodels/vasicek.hpp>
-#include <ql/methods/montecarlo/montecarlomodel.hpp>
-
-#include "utility.hpp"
-
-using namespace QuantLib;
-
-inline void simulateVasicek() {
+inline void discretiseVasicek() {
     Real kappa = 0.05;
     Real theta =0.03;
     Real sigma = 0.01; //absolute volatility
@@ -54,7 +49,7 @@ inline void simulateVasicek() {
     
     auto end = std::chrono::steady_clock::now();
     auto diff = end - start;
-    std::cout << "Simple Euler discretization: run time = " << std::chrono::duration <double, std::milli> (diff).count() << " ms" << std::endl;
+    std::cout << "Run time = " << std::chrono::duration <double, std::milli> (diff).count() << " ms" << std::endl;
     
     writeCsv(vasicek_distribution,"vasicek_dist.csv");
 }

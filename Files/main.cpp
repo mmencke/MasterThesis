@@ -11,13 +11,7 @@
 
 #include "checkversion.hpp"
 #include "utility.hpp"
-#include "SimpleSwapPricing.hpp"
-#include "SimulateVasicek.hpp"
-#include "VasicekSwapNoCr.hpp"
-#include "VasicekSwapCr.hpp"
-#include "CalibrateG2.hpp"
-#include "cdsStuff.hpp"
-#include "McCirCds.hpp"
+#include "DiscretiseVasicek.hpp"
 #include "CalibrateCir.hpp"
 #include "ApproxZcb.hpp"
 #include "MonteCarlo.hpp"
@@ -39,64 +33,26 @@ int main() {
     }
     
     /*******************************************************************/
-    /* SIMPLE SWAP PRICING                                             */
+    /* DISCRETISATION OF VASICEK                                       */
     /*******************************************************************/
     
-    run_section=false;
+    run_section = false;
     if(run_section) {
-        newSection("Simple Swap Pricing");
-        simpleSwapPricing();
+        newSection("Discretisation of Vasicek");
+        discretiseVasicek();
     }
     
     /*******************************************************************/
-    /* SIMULATE FROM VASICEK                                               */
-    /*******************************************************************/
-    run_section=false;
-    if(run_section) {
-        newSection("Simulate from Vasicek");
-        simulateVasicek();
-    }
-    /*******************************************************************/
-    /* VASICEK NO CR                                               */
-    /*******************************************************************/
-    run_section=false;
-    if(run_section) {
-        newSection("Swap in Vasicek with No Credit Risk");
-        vasicekSwapNoCr();
-    }
-    
-    /*******************************************************************/
-    /* VASICEK CR                              */
+    /* CALIBRATE CIR TO OLD MARKET DATA*/
     /*******************************************************************/
     
-    run_section=false;
+    run_section = true;
     if(run_section) {
-        newSection("Swap in Vasicek with Credit Risk");
-        vasicekSwapCr();
+        newSection("Calibrate CIR to Old Market Data");
+        calibrateCir();
     }
     
-    /*******************************************************************/
-    /* CALIBRATE G2                              */
-    /*******************************************************************/
 
-    run_section=false;
-    if(run_section) {
-        newSection("Calibration of G2");
-        calibrateG2();
-    }
-    
-    
-    run_section=false;
-    if(run_section) {
-        newSection("CDS Stuff");
-        cdsStuff();
-    }
-    
-    run_section=false;
-    if(run_section) {
-        newSection("CDS in CIR by MC");
-        mcCirCds();
-    }
     
     /*******************************************************************/
     /* Calibration of Interest Rate and Intensity                      */
@@ -108,15 +64,7 @@ int main() {
         calibration();
     }
     
-    /*******************************************************************/
-    /* CALIBRATE G2                              */
-    /*******************************************************************/
-    
-    run_section=true;
-    if(run_section) {
-        newSection("Calibrate CIR");
-        calibrateCir();
-    }
+
     /*******************************************************************/
     /* Approximation of Bank Account / ZCB                           */
     /*******************************************************************/

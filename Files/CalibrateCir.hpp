@@ -1,47 +1,64 @@
 //
-//  calibrateCir.hpp
+//  CalibrateCir.hpp
 //  Master Thesis
 //
 //  Created by Magnus Mencke on 28/04/2021.
 //  Copyright © 2021 Magnus Mencke. All rights reserved.
 //
 
-#ifndef calibrateCir_hpp
-#define calibrateCir_hpp
+#ifndef CalibrateCir_hpp
+#define CalibrateCir_hpp
 
 #include "headers.hpp"
 
 inline void calibrateCir() {
-    Date anchor_date(26,May,2009);
-    Settings::instance().evaluationDate() = anchor_date;
+    Date anchorDate(26,May,2009);
+    Settings::instance().evaluationDate() = anchorDate;
     
-    Actual360 the_day_count;
-    Actual360 zero_day_count;
-    TARGET the_calendar;
+    Actual360 cdsDayCount;
+    Actual360 zeroDayCount;
+    TARGET calendar;
     
-    std::vector<Date> the_dates;
-    std::vector<Rate> the_rates;
+    auto start = std::chrono::steady_clock::now();
+    auto end = std::chrono::steady_clock::now();
+    auto diff = end - start;
     
-    Matrix term_structure = readCsv("/Users/mmencke/Speciale_Data/table12-1.csv");
     
-    for(int i=0;i<term_structure.rows();i++) {
-        the_dates.push_back(Date(term_structure[i][0]));
-        the_rates.push_back(term_structure[i][1]);
+    /*******************************************************************/
+    /* CREATE YIELD CURVE OBJECT                                       */
+    /*******************************************************************/
+    
+    std::vector<Date> zeroDates;
+    std::vector<Rate> zeroRates;
+    
+    
+    // Table 12.1 in [Brigo, Morini and Pallavicini (2013), p. 286]
+    Matrix zeroTermStructure = readCsv("/Users/mmencke/Speciale_Data/table12-1.csv");
+    
+    for(int i=0;i<zeroTermStructure.rows();i++) {
+        zeroDates.push_back(Date(zeroTermStructure[i][0]));
+        zeroRates.push_back(zeroTermStructure[i][1]);
     }
     
-    ext::shared_ptr<YieldTermStructure> yield_curve_ptr(new InterpolatedZeroCurve<Cubic>(the_dates,the_rates, zero_day_count,the_calendar));
+    ext::shared_ptr<YieldTermStructure> yieldCurvePtr(new InterpolatedZeroCurve<Cubic>(zeroDates, zeroRates, zeroDayCount, calendar));
     
-    RelinkableHandle<YieldTermStructure> yield_curve_handle;
-    yield_curve_handle.linkTo(yield_curve_ptr);
-    
-    Matrix cds_spreads = readCsv("/Users/mmencke/Speciale_Data/table12-4.csv");
+    RelinkableHandle<YieldTermStructure> yieldCurveHandle;
+    yieldCurveHandle.linkTo(yieldCurvePtr);
     
     
-    //printMatrix(cds_spreads);
+    /*******************************************************************/
+    /* BOOTSTRAP DEFAULT PROBABILITY CURVE                             */
+    /*******************************************************************/
     
-    // market
+    // Table 12.4 in [Brigo, Morini and Pallavicini (2013), p. 289]
+    Matrix cdsSpreads = readCsv("/Users/mmencke/Speciale_Data/table12-4.csv");
+    
     Natural settlementDays = 3;
-    Real recovery_rate = 0.4;
+    Real recoveryRate = 0.4;
+    Frequency cdsFrequency = Quarterly;
+    DateGeneration::Rule cdsDateGen=DateGeneration::CDS2015;
+    BusinessDayConvention cdsConvention=Following;
+    
     std::vector<Period> tenors;
     for(int i=0;i<10;i++) {
         tenors.push_back((i+1) * Years);
@@ -50,190 +67,203 @@ inline void calibrateCir() {
     
     std::vector<ext::shared_ptr<DefaultProbabilityHelper> > instruments;
     for (Size i = 0; i < tenors.size(); i++) {
-        instruments.push_back(ext::shared_ptr<DefaultProbabilityHelper>(new SpreadCdsHelper(Handle<Quote>(ext::shared_ptr<Quote>(new SimpleQuote(cds_spreads[i][0]))),
-                                                                                            tenors[i], settlementDays, the_calendar, Quarterly, Following,
-                                                                                            DateGeneration::CDS2015,Actual360(),
-                                                                                            recovery_rate, yield_curve_handle)));
+        instruments.push_back(ext::shared_ptr<DefaultProbabilityHelper>(new SpreadCdsHelper(Handle<Quote>(ext::shared_ptr<Quote>(new SimpleQuote(cdsSpreads[i][0]))),
+                                                                                            tenors[i], settlementDays, calendar, cdsFrequency, cdsConvention,
+                                                                                            cdsDateGen,cdsDayCount,
+                                                                                            recoveryRate, yieldCurveHandle)));
     }
-    // Bootstrap hazard rates
+
     ext::shared_ptr<PiecewiseDefaultCurve<HazardRate, BackwardFlat> >
     hazardRateStructure(new PiecewiseDefaultCurve<HazardRate, BackwardFlat>(
-                                                                            anchor_date, instruments, the_day_count));
+                                                                            anchorDate, instruments, cdsDayCount));
     
-    RelinkableHandle<DefaultProbabilityTermStructure> default_curve_handle;
-    default_curve_handle.linkTo(hazardRateStructure);
+    RelinkableHandle<DefaultProbabilityTermStructure> defaultCurveHandle;
+    defaultCurveHandle.linkTo(hazardRateStructure);
     
     
-    //from page 125 in Brigo, Morini and Pallavicini
+    /*******************************************************************/
+    /* CREATE CDSO CALIBRATION HELPER                                  */
+    /*******************************************************************/
+    
+    Matrix cdsoVol = readCsv("/Users/mmencke/Speciale_Data/table12-7.csv");
+    
+    std::vector<ext::shared_ptr<CdsOptionHelper>> cdsoHelperVec;
+    
+    std::cout << "CDS Option Volatility: " << std::endl << std::endl;
+    
+    int k=0;
+    std::cout << boost::format("%-6s %-3s %-6s %-3s %6s") % "Expiry" % " | " % "Length" % " | " % "Vol." << std::endl;
+    std::cout << "------" << "---" << "------" << "---" << "------" << std::endl;
+    
+    for(int i=1; i<=10;i++) {
+        for(int j=10;j>=1+i;j--) {
+            std::cout << boost::format("%-6s %-3s %-6s %-3s %6s") % i % " | " % (10-(j-1)) % " | " % cdsoVol[k][0] << std::endl;
+            
+            ext::shared_ptr<CdsOptionHelper> tempHelperPtr(new CdsOptionHelper(i*Years,(10-(j-1))*Years,
+                                                                               Handle<Quote>(ext::shared_ptr<Quote>(new SimpleQuote(cdsoVol[k][0]))), recoveryRate, defaultCurveHandle, yieldCurveHandle));
+            
+            
+            cdsoHelperVec.push_back(tempHelperPtr);
+            
+            k++; //counter for the matrix
+        }
+    }
+    std::cout << std::endl;
+    
+    /*******************************************************************/
+    /* CALIBRATE CIR                                                   */
+    /*******************************************************************/
+    
+    
+    //Parameters from [Brigo, Morini and Pallavicini (2013), p. 125]
+    //Only used initially. Parameters will be changed in calibration
     Real kappa=0.4;
     Real theta = 0.026;
     Real sigma = 0.14;
     Real lambda0 = 0.0165;
     
     BigNatural seed = 1;
-    Size n_samples = 10000;
+    Size nSamples = 10000;
     
-    ext::shared_ptr<CoxIngersollRoss> cir_model(new CoxIngersollRoss(lambda0, theta, kappa, sigma));
-    ext::shared_ptr<PricingEngine> cdsOptionEngine(new McCirCdsOptionEngine(cir_model, n_samples, seed, recovery_rate, yield_curve_handle));
+    ext::shared_ptr<CoxIngersollRoss> cirModel(new CoxIngersollRoss(lambda0, theta, kappa, sigma));
+    ext::shared_ptr<PricingEngine> cirCdsoEngine(new McCirCdsOptionEngine(cirModel, nSamples, seed, recoveryRate, yieldCurveHandle));
     
-    //CdsOptionHelper test(1*Years,1*Years, vol_handle, 0.4, default_curve_handle, yield_curve_handle);
+    LevenbergMarquardt  optMethod(1.0e-8,1.0e-8,1.0e-8);//epsfcn,xtol,gtol
+    EndCriteria endCriteria(1000, 100, 1e-6, 1e-8, 1e-8);//maxIterations,  maxStationaryStateIterations,  rootEpsilon,  functionEpsilon,  gradientNormEpsilon
     
-    
-     Matrix csdo_vol = readCsv("/Users/mmencke/Speciale_Data/table12-7.csv");
-    
-    std::vector<ext::shared_ptr<CdsOptionHelper>> cds_option_helper_vec;
-    
-    int k=0;
-    std::cout << std::endl;
-    std::cout << boost::format("%-6s %-3s %-6s %-3s %6s") % "Expiry" % " | " % "Length" % " | " % "Vol." << std::endl;
-    std::cout << "------" << "---" << "-------" << "---" << "-------" << std::endl;
-    
-    for(int i=1; i<=10;i++) {
-        for(int j=10;j>=1+i;j--) {
-            std::cout << boost::format("%-6s %-3s %-6s %-3s %6s") % i % " | " % (10-(j-1)) % " | " % csdo_vol[k][0] << std::endl;
-            
-            ext::shared_ptr<CdsOptionHelper> temp_helper_ptr(new CdsOptionHelper(i*Years,(10-(j-1))*Years,
-                                                                               Handle<Quote>(ext::shared_ptr<Quote>(new SimpleQuote(csdo_vol[k][0]))), recovery_rate, default_curve_handle, yield_curve_handle));
-            
-            temp_helper_ptr->setPricingEngine(cdsOptionEngine);
-            
-            cds_option_helper_vec.push_back(temp_helper_ptr);
-            
-            k++; //counter for the matrix
-        }
-    }
-    std::cout << std::endl;
-    
-    LevenbergMarquardt  optimisation_method(1.0e-8,1.0e-8,1.0e-8);//epsfcn,xtol,gtol
-    EndCriteria end_criteria(1000, 100, 1e-6, 1e-8, 1e-8);//maxIterations,  maxStationaryStateIterations,  rootEpsilon,  functionEpsilon,  gradientNormEpsilon
-    
-    std::vector<ext::shared_ptr<CalibrationHelper>> temp;
-    for(int k=0; k<cds_option_helper_vec.size();k++){
-        temp.push_back(cds_option_helper_vec[k]);
+    std::vector<ext::shared_ptr<CalibrationHelper>> tempHelperVec;
+    for(int k=0; k<cdsoHelperVec.size();k++){
+        cdsoHelperVec[k]->setPricingEngine(cirCdsoEngine);
+        tempHelperVec.push_back(cdsoHelperVec[k]);
     }
     
-    //cir_model->calibrate(temp, optimisation_method, end_criteria);
+    start = std::chrono::steady_clock::now();
+    cirModel->calibrate(tempHelperVec, optMethod, endCriteria);
+    end = std::chrono::steady_clock::now();
+    diff = end - start;
     
-    std::cout << "CIR Parameters" << std::endl;
-    std::cout << cir_model->params()[0] << std::endl;
-    std::cout << cir_model->params()[1] << std::endl;
-    std::cout << cir_model->params()[2] << std::endl;
-    std::cout << cir_model->params()[3] << std::endl;
+    std::cout << "CIR: Run time = " << std::chrono::duration <double, std::ratio<60>>(diff).count() << " minutes" << std::endl;
+    
+    std::cout << "CIR: Parameters = " << std::endl;
+    std::cout << "   " << cirModel->params()[0] << std::endl;
+    std::cout << "   " << cirModel->params()[1] << std::endl;
+    std::cout << "   " << cirModel->params()[2] << std::endl;
+    std::cout << "   " << cirModel->params()[3] << std::endl;
     std::cout << std::endl;
     
-    Array cir_params={0.0384301,0.745443,0.144208,0.0400496};
-    cir_model->setParams(cir_params);
-    
-    int n=cds_option_helper_vec.size();
-    
-    Matrix calibrated_cir(n,5);
+    Array cirParams={0.0383418, 0.746503, 0.144219, 0.0397639};
+    cirModel->setParams(cirParams);
+
+    Matrix calibratedCir(cdsoHelperVec.size(),5);
     
     
     k=0;
     
     for(int i=1; i<=10;i++) {
         for(int j=10;j>=1+i;j--) {
-            calibrated_cir[k][0]=i;
-            calibrated_cir[k][1]=10-(j-1);
+            calibratedCir[k][0]=i;
+            calibratedCir[k][1]=10-(j-1);
             
             k++; //counter for the matrix
         }
     }
     
     
-    for(int k=0; k<cds_option_helper_vec.size();k++){
-        calibrated_cir[k][2]=cds_option_helper_vec[k]->marketValue();
-        calibrated_cir[k][3]=cds_option_helper_vec[k]->modelValue();
+    for(int k=0; k<cdsoHelperVec.size();k++){
+        calibratedCir[k][2]=cdsoHelperVec[k]->marketValue();
+        calibratedCir[k][3]=cdsoHelperVec[k]->modelValue();
     }
     
-    //Table 12.5
-    /*the_params[0]=0.03;
-    the_params[1]=0.5;
-    the_params[2]=0.5;
-    the_params[3]=0.05;
     
-    cir_model->setParams(the_params);
+    /*******************************************************************/
+    /* TRANSFORMING THE DEFAULT CURVE INTO AN EQUIVALENT YIELD CURVE   */
+    /*******************************************************************/
     
-
-    for(int k=0; k<cds_option_helper_vec.size();k++) {
-        calibrated_cir[k][4]=cds_option_helper_vec[k]->modelValue();
-    }
-    */
+    std::vector<Date> defaultDates = hazardRateStructure->dates();
+    std::vector<Real> defaultRates = hazardRateStructure->data();
     
-    
-    std::vector<Date> curve_dates = hazardRateStructure->dates();
-    std::vector<Real> curve_rates = hazardRateStructure->data();
-    
-    std::vector<Real> disc_factors;
-    for(int i=0;i<curve_dates.size();i++) {
-        disc_factors.push_back(hazardRateStructure->survivalProbability(curve_dates[i]));
+    std::vector<Real> equivDiscFactors;
+    for(int i=0;i<defaultDates.size();i++) {
+        equivDiscFactors.push_back(hazardRateStructure->survivalProbability(defaultDates[i]));
     }
     
-    ext::shared_ptr<InterpolatedDiscountCurve<Linear>> equivalent_yield_curve(new InterpolatedDiscountCurve<Linear>(curve_dates,disc_factors,the_day_count));
+    ext::shared_ptr<InterpolatedDiscountCurve<Linear>> equivYieldCurvePtr(new InterpolatedDiscountCurve<Linear>(defaultDates,equivDiscFactors,cdsDayCount));
     
-    Handle<YieldTermStructure> equivalent_handle(equivalent_yield_curve);
+    Handle<YieldTermStructure> equivYieldCurveHandle(equivYieldCurvePtr);
     
-    std::cout << std::endl;
+    std::cout << "Check that the discount factor from the equivalent yield curve is equal to the survival probability from the default curve:" << std::endl << std::endl;
     std::cout << boost::format("%-10s %-3s %-10s %-3s %-10s %-3s %-10s %-3s %-10s %-3s %-10s") % "Date 1" % " | " % "Date 2" % " | " % "Rate 1" % " | " % "Rate 2" % " | " % "ZCB 1" % " | " % "ZCB 2" << std::endl;
     std::cout << "-----------" << "----" << "-----------" << "----" << "-----------" << "----" << "-----------" << "----" << "-----------" << "----" << "-----------" << std::endl;
-    for(int i=0;i<curve_dates.size();i++) {
-        Real zero_rate =equivalent_yield_curve->zeroRate(curve_dates[i],the_day_count,Continuous);
-        std::cout << boost::format("%-10s %-3s %-10s %-3s %-10s %-3s %-10s %-3s %-10s %-3s %-10s") % curve_dates[i] % " | " % equivalent_yield_curve->dates()[i] % " | " % curve_rates[i] % " | " % zero_rate % " | " % hazardRateStructure->survivalProbability(curve_dates[i]) % " | " % equivalent_yield_curve->discount(curve_dates[i]) << std::endl;
+    for(int i=0;i<defaultDates.size();i++) {
+        Real equivZeroRate =equivYieldCurvePtr->zeroRate(defaultDates[i],cdsDayCount,Continuous);
+        std::cout << boost::format("%-10s %-3s %-10s %-3s %-10s %-3s %-10s %-3s %-10s %-3s %-10s") % defaultDates[i] % " | " % equivYieldCurvePtr->dates()[i] % " | " % defaultRates[i] % " | " % equivZeroRate % " | " % hazardRateStructure->survivalProbability(defaultDates[i]) % " | " % equivYieldCurvePtr->discount(defaultDates[i]) << std::endl;
     }
     std::cout << std::endl;
     
-    ext::shared_ptr<ExtendedCoxIngersollRoss> extCir(new ExtendedCoxIngersollRoss(equivalent_handle,cir_params[0],cir_params[1],cir_params[2],cir_params[3]));
     
-    ext::shared_ptr<PricingEngine> cdsOptionEngineExt(new McCirCdsOptionEngine(extCir, n_samples, seed, recovery_rate, yield_curve_handle));
+    /*******************************************************************/
+    /* CALIBRATE CIR++                                                 */
+    /*******************************************************************/
+    
+    // Here we start calibration in the calibrated parameters from CIR
+    
+    ext::shared_ptr<ExtendedCoxIngersollRoss> extCirModel(new ExtendedCoxIngersollRoss(equivYieldCurveHandle,cirParams[0],cirParams[1],cirParams[2],cirParams[3]));
+    
+    ext::shared_ptr<PricingEngine> extCirCdsoEngine(new McCirCdsOptionEngine(extCirModel, nSamples, seed, recoveryRate, yieldCurveHandle));
     
     
-    
-     for(int k=0; k<cds_option_helper_vec.size();k++){
-        cds_option_helper_vec[k]->setPricingEngine(cdsOptionEngineExt);
+    tempHelperVec.clear();
+     for(int k=0; k<cdsoHelperVec.size();k++){
+        cdsoHelperVec[k]->setPricingEngine(extCirCdsoEngine);
+        tempHelperVec.push_back(cdsoHelperVec[k]);
     }
     
-
-    for(int k=0; k<cds_option_helper_vec.size();k++){
-        temp.push_back(cds_option_helper_vec[k]);
-    }
+    start = std::chrono::steady_clock::now();
+    extCirModel->calibrate(tempHelperVec, optMethod, endCriteria);
+    end = std::chrono::steady_clock::now();
+    diff = end - start;
+    
+    std::cout << "CIR++: Run time = " << std::chrono::duration <double, std::ratio<60>>(diff).count() << " minutes" << std::endl;
     
     
-    //extCir->calibrate(temp, optimisation_method, end_criteria);
-    
-    Array extCirParams={0.0331913,0.780113,0.239354,0.0166051};
-    
-    std::cout << "CIR++ Parameters" << std::endl;
-    std::cout << extCir->params()[0] << std::endl;
-    std::cout << extCir->params()[1] << std::endl;
-    std::cout << extCir->params()[2] << std::endl;
-    std::cout << extCir->params()[3] << std::endl;
+    std::cout << "CIR++: Parameters = " << std::endl;
+    std::cout << "   " << extCirModel->params()[0] << std::endl;
+    std::cout << "   " << extCirModel->params()[1] << std::endl;
+    std::cout << "   " << extCirModel->params()[2] << std::endl;
+    std::cout << "   " << extCirModel->params()[3] << std::endl;
     std::cout << std::endl;
     
-    extCir->setParams(extCirParams);
-    //extCir->setParams(cir_params);
     
-    for(int k=0; k<cds_option_helper_vec.size();k++){
-        calibrated_cir[k][4]=cds_option_helper_vec[k]->modelValue();
+    
+    Array extCirParams={0.033287, 0.782708, 0.239351, 0.0166414};
+    extCirModel->setParams(extCirParams);
+    
+    for(int k=0; k<cdsoHelperVec.size();k++){
+        calibratedCir[k][4]=cdsoHelperVec[k]->modelValue();
     }
     
-    writeCsv(calibrated_cir,"calibrated_cir.csv");
+    writeCsv(calibratedCir,"calibratedCir.csv");
     
-    Matrix calibrated_cir_term(100,4);
+    
+    /*******************************************************************/
+    /* CHECK TERM STRUCTURE                                            */
+    /*******************************************************************/
+    
+    Matrix calibratedCirTerm(100,4);
     
     Time t = 0;
     for(int i=0;i<100;i++) {
         t+=0.1;
-        calibrated_cir_term[i][0]=t;
-        calibrated_cir_term[i][1]=hazardRateStructure->survivalProbability(t);
-        //calibrated_cir_term[i][1]=equivalent_yield_curve->discount(t);
-        calibrated_cir_term[i][2]=cir_model->discount(t);
-        calibrated_cir_term[i][3]=extCir->discount(t);
+        calibratedCirTerm[i][0]=t;
+        calibratedCirTerm[i][1]=hazardRateStructure->survivalProbability(t);
+        calibratedCirTerm[i][2]=cirModel->discount(t);
+        calibratedCirTerm[i][3]=extCirModel->discount(t);
     }
     
-    writeCsv(calibrated_cir_term,"calibrated_cir_term.csv");
+    writeCsv(calibratedCirTerm,"calibratedCirTerm.csv");
     
     
 }
 
 
-#endif /* calibrateCir_hpp */
+#endif /* CalibrateCir_hpp */
