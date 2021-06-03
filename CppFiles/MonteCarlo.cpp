@@ -15,7 +15,7 @@ Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap>> swapPortfoli
                           Real ctptyRecovery, Real invstRecovery) {
     
     Date anchorDate = Settings::instance().evaluationDate();
-    
+
     Date longestMaturity =swapPortfolio[0]->maturityDate();
     for(int i=0;i<swapPortfolio.size();i++) {
         if(longestMaturity<swapPortfolio[i]->maturityDate()) {
@@ -30,9 +30,6 @@ Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap>> swapPortfoli
     
     InverseCumulativeRng<MersenneTwisterUniformRng,InverseCumulativeNormal> rng(*uniformGenerator);
     
-    
-    
-    
     Matrix rhoChol = CholeskyDecomposition(rho);
     
     Natural nNormals = 4;//we need to have 4 normals for every step
@@ -46,7 +43,10 @@ Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap>> swapPortfoli
     ext::shared_ptr<StochasticProcess> ctptyIntensityProcess = ctptyIntensity->dynamics()->process();
     ext::shared_ptr<StochasticProcess> invstIntensityProcess = invstIntensity->dynamics()->process();
     
+    Matrix cvaDvaSample(nSamples,4);
+    
     for(int l=0;l<nSamples;l++) {
+        std::cout << "Sample Index=" << l << std::endl;
         //std::cout << (double)l/((double)nSamples) << std::endl;
         Real ctptyU =1-uniformGenerator->nextReal();
         Real invstU =1-uniformGenerator->nextReal();
@@ -66,6 +66,8 @@ Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap>> swapPortfoli
         
         Real portfolioNpv=0;
         Time tau;
+        
+        Real cva,dva;
         
         for(int i=0;i<nTimeSteps-1;i++) {//default on the last timestep does not count as a default
             Time t = timeGrid[i];
@@ -110,6 +112,10 @@ Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap>> swapPortfoli
             std::vector<Real> discFactors;
             
             for(int j=timeGrid.index(tau);j<nTimeSteps;j++) {
+                /*if(l==5421) {
+                    std::cout << std::setprecision(16) << tau << ", " << timeGrid[j] << ", " << x[0] << ", " << x[1] << std::endl;
+                }*/
+                
                 dates.push_back(anchorDate+timeGrid[j]*365);
                 discFactors.push_back(interestRate->discountBond(tau,timeGrid[j],x));
             }
@@ -171,19 +177,21 @@ Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap>> swapPortfoli
                 
                 portfolioNpv+=temp.NPV();
             }
+            
+            
             if(ctptyDefault) {
                 if(portfolioNpv>0) {
-                    cvaAccumulator.add((1-ctptyRecovery)*portfolioNpv/bankAccount,pathWeight);
+                    cva=(1-ctptyRecovery)*portfolioNpv/bankAccount;
                 } else {
-                    cvaAccumulator.add(0,pathWeight);
+                    cva=0;
                 }
             }
             
             if(invstDefault) {
                 if(portfolioNpv<0) {
-                    dvaAccumulator.add(-(1-invstRecovery)*portfolioNpv/bankAccount,pathWeight);
+                    dva=-(1-invstRecovery)*portfolioNpv/bankAccount;
                 } else {
-                    dvaAccumulator.add(0,pathWeight);
+                    dva=0;
                 }
             }
             
@@ -191,12 +199,25 @@ Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap>> swapPortfoli
         }
         
         if (!ctptyDefault) {
-            cvaAccumulator.add(0,pathWeight);
+            cva=0;
         }
         if (!invstDefault) {
-            dvaAccumulator.add(0,pathWeight);
+            dva=0;
         }
+        
+        cvaAccumulator.add(cva,pathWeight);
+        dvaAccumulator.add(dva,pathWeight);
+        
+        cvaDvaSample[l][0]=cva;
+        cvaDvaSample[l][1]=dva;
+        cvaDvaSample[l][2]=x[0];
+        cvaDvaSample[l][3]=x[1];
+        
+        
     }
+    
+    writeCsv(cvaDvaSample,"cvaDvaSample.csv");
+    
     //reset evaluationdate
     Settings::instance().evaluationDate()=anchorDate;
     

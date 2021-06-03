@@ -19,10 +19,8 @@ inline void discretiseCir() {
     Statistics statistics;
     
     bool brownianBridge = false;
-    bool antitheticVariate = false;
-    bool withFellerConstraint = true;
     
-    //Parameters from [Brigo, Morini and Pallavicini (2013), p. 125]
+    // Parameters from [Brigo, Morini and Pallavicini (2013), p. 125]
     Real kappa=0.4;
     Real mu = 0.026;
     Real v = 0.14;

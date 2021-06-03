@@ -21,7 +21,6 @@ inline void correlatedNormals() {
     InverseCumulativeRng<MersenneTwisterUniformRng,InverseCumulativeNormal> rng(uniformGenerator);
 
     Natural n = 10000;
-    Real dt=1.0/52.0;
 
     Matrix rho(3,3);
     rho[0][0]=rho[1][1]=rho[2][2]=1;
@@ -40,8 +39,6 @@ inline void correlatedNormals() {
     std::cout << std::endl;
 
     Matrix correlatedNormals(n,3);
-
-
 
     for(int k=0;k<n;k++) {
         Array dw(3);

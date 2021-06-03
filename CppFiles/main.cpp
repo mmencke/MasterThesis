@@ -15,11 +15,15 @@
 #include "CalibrateCir.hpp"
 #include "Calibration.hpp"
 #include "MonteCarlo.hpp"
+#include "SwapNpvShift.hpp"
+#include "MonteCarloSample.hpp"
+
 
 int main() {
-    //std::locale::global(std::locale("en_US.UTF-8")); //sets global number formatting to US
     
-    bool run_section = false;
+    bool run_section;
+    
+    run_section = true;
     if(run_section) {
         newSection("Check Version");
         checkVersion();
@@ -40,14 +44,14 @@ int main() {
     /* DISCRETISATION OF VASICEK                                       */
     /*******************************************************************/
     
-    run_section = false;
+    run_section = true;
     if(run_section) {
         newSection("Discretisation of Vasicek");
         discretiseVasicek();
     }
     
     /*******************************************************************/
-    /* DISCRETISATION OF CIR                                       */
+    /* DISCRETISATION OF CIR                                           */
     /*******************************************************************/
     
     run_section = true;
@@ -58,37 +62,57 @@ int main() {
     
     
     /*******************************************************************/
-    /* CALIBRATE CIR TO OLD MARKET DATA*/
+    /* CALIBRATE CIR TO OLD MARKET DATA                                */
     /*******************************************************************/
     
-    run_section = false;
+    run_section = true;
     if(run_section) {
         newSection("Calibrate CIR to Old Market Data");
         calibrateCir();
     }
     
-
-    
     /*******************************************************************/
-    /* Calibration of Interest Rate and Intensity                      */
+    /* CALIBRATION TO NEW MARKET DATA                                  */
     /*******************************************************************/
 
-    run_section=false;
+    run_section = true;
     if(run_section) {
         newSection("Calibration of Interest Rate and Intensity");
         calibration();
     }
     
     /*******************************************************************/
-    /* MONTE CARLO CVA AND DVA                          */
+    /* MONTE CARLO CVA AND DVA                                         */
     /*******************************************************************/
     
-    run_section=true;
+    run_section = true;
     if(run_section) {
         newSection("CVA and DVA by Monte Carlo");
         mcCva();
     }
     
+    /*******************************************************************/
+    /* SWAP NPV SHIFT                                                  */
+    /*******************************************************************/
+    
+    run_section = true;
+    if(run_section) {
+        newSection("Changes in Swap NPV by shifts in the Gaussian Factors");
+        swapNpvShift();
+    }
+    
+    /*******************************************************************/
+    /* MONTE CARLO SAMPLE                                              */
+    /*******************************************************************/
+    
+    // Every time the Monte Carlo simulation is run, the samples are output along with the realisation of the Gaussian Factors.
+    // We want to investigate the 30y independent ATM case, so this is run here alone to overwrite the csv.
+    
+    run_section = true;
+    if(run_section) {
+        newSection("Monte Carlo Sample (Single Maturity)");
+        monteCarloSample();
+    }
     
     
     return 0;

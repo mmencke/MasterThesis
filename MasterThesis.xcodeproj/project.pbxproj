@@ -33,6 +33,8 @@
 		2E47EB20264B0DBE003C0C46 /* MonteCarlo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MonteCarlo.cpp; sourceTree = "<group>"; };
 		2E47EB23264B0FF7003C0C46 /* headers.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = headers.hpp; sourceTree = "<group>"; };
 		2E47EB26264BC769003C0C46 /* Calibration.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Calibration.hpp; sourceTree = "<group>"; };
+		2E63606F2663BE0100ED2EE9 /* MonteCarloSample.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = MonteCarloSample.hpp; sourceTree = "<group>"; };
+		2E6360722664C0BC00ED2EE9 /* SwapNpvShift.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SwapNpvShift.hpp; sourceTree = "<group>"; };
 		2EAF5A1C261247F70096F773 /* Master Thesis */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Master Thesis"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2EAF5A1F261247F70096F773 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		2EAF5A2926131FD20096F773 /* CheckVersion.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = CheckVersion.hpp; sourceTree = "<group>"; };
@@ -75,15 +77,17 @@
 				2E47EB23264B0FF7003C0C46 /* headers.hpp */,
 				2EAF5A2A26132F3F0096F773 /* utility.hpp */,
 				2EAF5A2926131FD20096F773 /* CheckVersion.hpp */,
+				2E244221265E8BE600DE5CA6 /* CorrelatedNormals.hpp */,
 				2EDACA0F261395590088DB57 /* DiscretiseVasicek.hpp */,
 				2E24421B265CFCD200DE5CA6 /* DiscretiseCir.hpp */,
-				2E24421D265D15C300DE5CA6 /* ExtraCirProcesses.cpp */,
 				2E24421E265D15C300DE5CA6 /* ExtraCirProcesses.hpp */,
+				2E24421D265D15C300DE5CA6 /* ExtraCirProcesses.cpp */,
 				2EBE39F32639AC5C00FBC7EC /* CalibrateCir.hpp */,
 				2E47EB26264BC769003C0C46 /* Calibration.hpp */,
 				2E47EB1E2649356C003C0C46 /* MonteCarlo.hpp */,
-				2E244221265E8BE600DE5CA6 /* CorrelatedNormals.hpp */,
 				2E47EB20264B0DBE003C0C46 /* MonteCarlo.cpp */,
+				2E6360722664C0BC00ED2EE9 /* SwapNpvShift.hpp */,
+				2E63606F2663BE0100ED2EE9 /* MonteCarloSample.hpp */,
 			);
 			path = CppFiles;
 			sourceTree = "<group>";

@@ -25,4 +25,4 @@ inline void checkVersion() {
     std::cout << "Using QuantLIB version " << QL_VERSION << std::endl;
 }
 
-#endif /* check_version_hpp */
+#endif /* CheckVersion_hpp */

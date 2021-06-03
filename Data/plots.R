@@ -582,6 +582,40 @@ uniroot(fToSolve, c(-1,1),c=-1)$root
 sprintf("%.15f",f(-0.05,-0.648994))
 sprintf("%.15f",f(-0.05,0.7505596))
 
+#########################################
+# SWAP NPV SHIFT             #
+#########################################
+
+swap_npv_shift<-load.matrix(folder, "swapNpvShift.csv")
+p_swap_npv_shift<-ggplot(data=swap_npv_shift) +  
+  geom_point(aes(x=V1,y=V2,colour="x_1"),show.legend = F)+
+  scale_colour_manual(values=c("x_1"=cbs.blue))+
+  labs(colour="Legend", x=expression(x[1]),y="NPV")+
+  theme_cbs()
+p_swap_npv_shift
+
+kappa1<-0.00549236
+sigma1<-0.00970193
+T<-30
+g2_x1_sd<-sqrt(sigma1^2/(2*kappa1)*(1-exp(-2*kappa1*T)))
+
+xfit <- seq(-0.1, 0.1, length = 10000) 
+yfit <- dnorm(xfit, mean = 0, sd = g2_x1_sd) 
+
+true_density<-data.frame(xfit,yfit)
+
+plot(true_density)
+
+
+p_x1_density<-ggplot(data=true_density) +  
+  geom_point(aes(x=xfit,y=yfit,colour="x_1"),show.legend = F)+
+  scale_colour_manual(values=c("x_1"=cbs.blue))+
+  labs(colour="Legend", x=expression(x[1]),y="Density")+
+  theme_cbs()
+
+
+ggsave("ROutput/swap-npv-shift.pdf", arrangeGrob(p_x1_density, p_swap_npv_shift,nrow=1),width=16, height = 9)
+embed_fonts("ROutput/swap-npv-shift.pdf")
 
 #########################################
 # TRANSFORM DATA TO TABLES              #
@@ -653,6 +687,6 @@ for(i in 1:dim(cva_dva_rwr)[1]) {
   cva_dva_rwr_output$X7[i]<-paste0(format(round(cva_dva_rwr$V12[i]),big.mark=",")," (", format(round(cva_dva_rwr$V13[i]),big.mark=","),")")
 }
 
-write.table(cva_dva_rwr_output, file="ROutput/cva_dva_rwr_output.csv",
+write.table(cva_dva_rwr_output, file="ROutput/cva-dva-rwr-output.csv",
             quote=F, sep=";", col.names = F,row.names = F)
 

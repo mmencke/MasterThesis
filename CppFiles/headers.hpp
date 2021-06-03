@@ -12,6 +12,7 @@
 #include "utility.hpp"
 
 #include <iostream>
+#include <iomanip>
 #include <boost/format.hpp>
 
 #include <ql/quantlib.hpp>

@@ -1,13 +1,13 @@
 //
-//  CalibrateG2New.hpp
+//  Calibration.hpp
 //  Master Thesis
 //
 //  Created by Magnus Mencke on 12/05/2021.
 //  Copyright © 2021 Magnus Mencke. All rights reserved.
 //
 
-#ifndef CalibrateG2New_hpp
-#define CalibrateG2New_hpp
+#ifndef Calibration_hpp
+#define Calibration_hpp
 
 #include "headers.hpp"
 
@@ -241,7 +241,7 @@ inline void calibration() {
     
     Handle<YieldTermStructure> bankEquivYieldCurveHandle(bankEquivYieldCurvePtr);
     
-    //Parameters from [Brigo, Morini and Pallavicini (2013), p. 125]
+    // Parameters from [Brigo, Morini and Pallavicini (2013), p. 125]
     Real kappa=0.4;
     Real theta = 0.026;
     Real sigma = 0.14;
@@ -302,4 +302,4 @@ inline void calibration() {
 }
 
 
-#endif /* CalibrateG2New_hpp */
+#endif /* Calibration_hpp */

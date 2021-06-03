@@ -9,8 +9,6 @@
 #ifndef ExtraCirProcesses_hpp
 #define ExtraCirProcesses_hpp
 
-//#include <iostream>
-
 #include <ql/stochasticprocess.hpp>
 #include <ql/processes/eulerdiscretization.hpp>
 

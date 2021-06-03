@@ -28,7 +28,6 @@ inline void discretiseVasicek() {
     TimeGrid timeGrid(1, nTimeSteps);
     
     bool brownianBridge = false;
-    bool antitheticVariate = false;
     
     PseudoRandom::rsg_type rsg = PseudoRandom::make_sequence_generator(nTimeSteps, seed);
     
@@ -54,4 +53,4 @@ inline void discretiseVasicek() {
     writeCsv(vasicekDistribution,"vasicekDistribution.csv");
 }
 
-#endif /* SimulateVasicek_hpp */
+#endif /* DiscretiseVasicek_hpp */
