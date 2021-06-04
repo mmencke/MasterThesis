@@ -537,10 +537,10 @@ p_hhDevelopment<-ggplot(data=hhDevelopment) +
   labs(colour="Maturity",x="Reference Date", y="Swap Rate",title="Development")+
   theme_cbs()
 
-ggsave("hostrup-have.pdf", 
+ggsave("ROutput/hostrup-have.pdf", 
        arrangeGrob(p_hostrupHave, p_hhDevelopment, nrow=1),
        width=16, height = 9)
-embed_fonts("hostrup-have.pdf")
+embed_fonts("ROutput/hostrup-have.pdf")
 
 #########################################
 # VARIOUS CALCULATIONS                  #

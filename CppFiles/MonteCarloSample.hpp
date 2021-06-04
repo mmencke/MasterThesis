@@ -77,12 +77,6 @@ inline void monteCarloSample() {
     Array hwParams={0.00531006,0.00673971};
     hwModel->setParams(hwParams);
     
-    for(int i =1;i<300;i++) {
-        std::cout << "Zero Rate=" << -log(g2Model->discountBond(13,13+i*0.1, {-0.06491281485674998, -0.0148202903350436}))/(i*0.1) << std::endl;
-    }
-    
-    
-    
     /*******************************************************************/
     /* BOOTSTRAPPING HAZARD RATES                              */
     /*******************************************************************/
@@ -203,7 +197,7 @@ inline void monteCarloSample() {
     
     Real rateAdj=0.0025; //25bp
     
-    Matrix exmpSwaps(exmpSwapTenors.size(),7);
+    Matrix exmpSwaps(exmpSwapTenors.size(),3);
     
     for(int i=0;i<exmpSwapTenors.size();i++) {
         VanillaSwap tempSwap=MakeVanillaSwap(exmpSwapTenors[i], euriborIndex,tempFixedRate)
@@ -222,39 +216,19 @@ inline void monteCarloSample() {
         ;
         atmSwapVec.push_back(ext::make_shared<VanillaSwap>(atmSwap));
         
-        VanillaSwap itmSwap=MakeVanillaSwap(exmpSwapTenors[i], euriborIndex,parRate-rateAdj)
-        .withType(swapType)
-        .withNominal(nominal)
-        .withEffectiveDate(startDate)
-        .withFloatingLegSpread(swapSpread)
-        ;
-        itmSwapVec.push_back(ext::make_shared<VanillaSwap>(itmSwap));
-        
-        VanillaSwap otmSwap=MakeVanillaSwap(exmpSwapTenors[i], euriborIndex,parRate+rateAdj)
-        .withType(swapType)
-        .withNominal(nominal)
-        .withEffectiveDate(startDate)
-        .withFloatingLegSpread(swapSpread)
-        ;
-        otmSwapVec.push_back(ext::make_shared<VanillaSwap>(otmSwap));
-        
         exmpSwaps[i][0]=years(exmpSwapTenors[i]);
         exmpSwaps[i][1]=atmSwapVec[i]->fixedRate()*10000;
         exmpSwaps[i][2]=atmSwapVec[i]->NPV();
-        exmpSwaps[i][3]=itmSwapVec[i]->fixedRate()*10000;
-        exmpSwaps[i][4]=itmSwapVec[i]->NPV();
-        exmpSwaps[i][5]=otmSwapVec[i]->fixedRate()*10000;
-        exmpSwaps[i][6]=otmSwapVec[i]->NPV();
     }
     
+    std::cout << std::endl;
     printMatrix(exmpSwaps);
-    
+    std::cout << std::endl;
     
     Real cptRecovery = 0.4;
     Real bankRecovery = 0.4;
     
     unsigned long seed =1;
-    
     
     Matrix rho(4,4,0);
     rho[0][0]=rho[1][1]=rho[2][2]=rho[3][3]=1;
@@ -275,7 +249,7 @@ inline void monteCarloSample() {
     
     
     start = std::chrono::steady_clock::now();
-    Matrix cvaDvaInd(exmpSwapTenors.size(),13);
+    Matrix cvaDvaInd(exmpSwapTenors.size(),5);
     
     for(int i=0;i<exmpSwapTenors.size();i++) {
         cvaDvaInd[i][0]=years(exmpSwapTenors[i]);
@@ -294,33 +268,11 @@ inline void monteCarloSample() {
         cvaDvaInd[i][3]=tempMatrix[0][1];
         cvaDvaInd[i][4]=qNorm95*tempMatrix[1][1];
         
-        tempSvapVec.clear();
-        tempSvapVec.push_back(itmSwapVec[i]);
-        
-        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
-                                      rho,g2Model, cirCptModel, cirBankModel,
-                                      cptRecovery, bankRecovery);
-        
-        cvaDvaInd[i][5]=tempMatrix[0][0];
-        cvaDvaInd[i][6]= qNorm95*tempMatrix[1][0];
-        cvaDvaInd[i][7]=tempMatrix[0][1];
-        cvaDvaInd[i][8]=qNorm95*tempMatrix[1][1];
-        
-        tempSvapVec.clear();
-        tempSvapVec.push_back(otmSwapVec[i]);
-        
-        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
-                                      rho,g2Model, cirCptModel, cirBankModel,
-                                      cptRecovery, bankRecovery);
-        
-        cvaDvaInd[i][9]=tempMatrix[0][0];
-        cvaDvaInd[i][10]= qNorm95*tempMatrix[1][0];
-        cvaDvaInd[i][11]=tempMatrix[0][1];
-        cvaDvaInd[i][12]=qNorm95*tempMatrix[1][1];
-        
     }
     
+    std::cout << std::endl;
     printMatrix(cvaDvaInd);
+    std::cout << std::endl;
     
     end = std::chrono::steady_clock::now();
     

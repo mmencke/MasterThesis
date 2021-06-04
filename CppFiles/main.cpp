@@ -23,7 +23,7 @@ int main() {
     
     bool run_section;
     
-    run_section = true;
+    run_section = false;
     if(run_section) {
         newSection("Check Version");
         checkVersion();
@@ -33,18 +33,17 @@ int main() {
     /* CORRELATED NORMALS                                              */
     /*******************************************************************/
     
-    run_section = true;
+    run_section = false;
     if(run_section) {
         newSection("Correlated Normals");
         correlatedNormals();
     }
     
-    
     /*******************************************************************/
     /* DISCRETISATION OF VASICEK                                       */
     /*******************************************************************/
     
-    run_section = true;
+    run_section = false;
     if(run_section) {
         newSection("Discretisation of Vasicek");
         discretiseVasicek();
@@ -54,18 +53,17 @@ int main() {
     /* DISCRETISATION OF CIR                                           */
     /*******************************************************************/
     
-    run_section = true;
+    run_section = false;
     if(run_section) {
         newSection("Discretisation of CIR");
         discretiseCir();
     }
     
-    
     /*******************************************************************/
     /* CALIBRATE CIR TO OLD MARKET DATA                                */
     /*******************************************************************/
     
-    run_section = true;
+    run_section = false;
     if(run_section) {
         newSection("Calibrate CIR to Old Market Data");
         calibrateCir();
@@ -75,7 +73,7 @@ int main() {
     /* CALIBRATION TO NEW MARKET DATA                                  */
     /*******************************************************************/
 
-    run_section = true;
+    run_section = false;
     if(run_section) {
         newSection("Calibration of Interest Rate and Intensity");
         calibration();
@@ -85,7 +83,7 @@ int main() {
     /* MONTE CARLO CVA AND DVA                                         */
     /*******************************************************************/
     
-    run_section = true;
+    run_section = false;
     if(run_section) {
         newSection("CVA and DVA by Monte Carlo");
         mcCva();
@@ -95,7 +93,7 @@ int main() {
     /* SWAP NPV SHIFT                                                  */
     /*******************************************************************/
     
-    run_section = true;
+    run_section = false;
     if(run_section) {
         newSection("Changes in Swap NPV by shifts in the Gaussian Factors");
         swapNpvShift();
@@ -113,7 +111,6 @@ int main() {
         newSection("Monte Carlo Sample (Single Maturity)");
         monteCarloSample();
     }
-    
     
     return 0;
 }

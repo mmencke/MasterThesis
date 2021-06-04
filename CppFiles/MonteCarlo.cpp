@@ -46,8 +46,6 @@ Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap>> swapPortfoli
     Matrix cvaDvaSample(nSamples,4);
     
     for(int l=0;l<nSamples;l++) {
-        std::cout << "Sample Index=" << l << std::endl;
-        //std::cout << (double)l/((double)nSamples) << std::endl;
         Real ctptyU =1-uniformGenerator->nextReal();
         Real invstU =1-uniformGenerator->nextReal();
         
@@ -112,15 +110,10 @@ Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap>> swapPortfoli
             std::vector<Real> discFactors;
             
             for(int j=timeGrid.index(tau);j<nTimeSteps;j++) {
-                /*if(l==5421) {
-                    std::cout << std::setprecision(16) << tau << ", " << timeGrid[j] << ", " << x[0] << ", " << x[1] << std::endl;
-                }*/
-                
                 dates.push_back(anchorDate+timeGrid[j]*365);
                 discFactors.push_back(interestRate->discountBond(tau,timeGrid[j],x));
             }
             
-            //std::cout <<dates.size() << std::endl;
             ext::shared_ptr<InterpolatedDiscountCurve<Cubic>> impliedTermStructure(
                                                                                    new InterpolatedDiscountCurve<Cubic>(dates,discFactors,dummyDayCounter,dummyCalendar));
             
