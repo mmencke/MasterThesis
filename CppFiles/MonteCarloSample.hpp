@@ -125,8 +125,8 @@ inline void monteCarloSample() {
     
     Handle<YieldTermStructure> equivalentHandleBank(equivalentPtrBank);
     
-    //from page 125 in Brigo, Morini and Pallavicini
-    Real kappa=0.4;
+    // Parameters from [Brigo, Morini and Pallavicini (2013), p. 125]
+    Real kappa = 0.4;
     Real theta = 0.026;
     Real sigma = 0.14;
     Real lambda0 = 0.0165;
@@ -235,18 +235,19 @@ inline void monteCarloSample() {
     
     ext::shared_ptr<MersenneTwisterUniformRng> uniformGenerator(new MersenneTwisterUniformRng(seed));
     
-    Size nSamples=10000;
+    Matrix rhoHw(3,3,0);
+    rhoHw[0][0]=rhoHw[1][1]=rhoHw[2][2]=1;
+    
+    Size nSamples=100000;
     
     Real qNorm95=1.959963984540054;//Source: sprintf("%.15f",qnorm(0.975)) in R
-    
-    
+
     std::vector<ext::shared_ptr<VanillaSwap>> tempSvapVec;
     Matrix tempMatrix;
     
     /*******************************************************************/
-    /* INDEPENDENCE                                                    */
+    /* INDEPENDENCE: G2++ PSEUDO-RANDOM                                */
     /*******************************************************************/
-    
     
     start = std::chrono::steady_clock::now();
     Matrix cvaDvaInd(exmpSwapTenors.size(),5);
@@ -270,7 +271,7 @@ inline void monteCarloSample() {
         
     }
     
-    std::cout << std::endl;
+    std::cout << std::endl << "G2++ Pseudo-Random:"<<std::endl;
     printMatrix(cvaDvaInd);
     std::cout << std::endl;
     
@@ -278,7 +279,87 @@ inline void monteCarloSample() {
     
     diff = end - start;
     
-    std::cout << "Monte Carlo Sample: Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
+    std::cout << "Monte Carlo Sample (G2++ Pseudo-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
+    
+    
+    /*******************************************************************/
+    /* INDEPENDENCE: G2++ QUASI-RANDOM                                 */
+    /*******************************************************************/
+    
+    
+    start = std::chrono::steady_clock::now();
+    
+    Matrix cvaDvaIndSobol(exmpSwapTenors.size(),5);
+    
+    for(int i=0;i<exmpSwapTenors.size();i++) {
+        cvaDvaIndSobol[i][0]=years(exmpSwapTenors[i]);
+        //one step per week
+        Size nTimeSteps=52*years(exmpSwapTenors[i]);
+        
+        
+        ext::shared_ptr<SobolRsg> sobolRsg(new SobolRsg(4*nTimeSteps,seed));
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(atmSwapVec[i]);
+        
+        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,sobolRsg,nTimeSteps,nSamples,
+         rho,g2Model, cirCptModel, cirBankModel,
+         cptRecovery, bankRecovery);
+        
+        cvaDvaIndSobol[i][1]=tempMatrix[0][0];
+        cvaDvaIndSobol[i][2]= qNorm95*tempMatrix[1][0];
+        cvaDvaIndSobol[i][3]=tempMatrix[0][1];
+        cvaDvaIndSobol[i][4]=qNorm95*tempMatrix[1][1];
+        
+    }
+    
+    std::cout << std::endl << "G2++ Quasi-Random:"<<std::endl;
+    printMatrix(cvaDvaIndSobol);
+    std::cout << std::endl;
+    
+    end = std::chrono::steady_clock::now();
+    
+    diff = end - start;
+    
+    std::cout << "Monte Carlo Sample (G2++ Quasi-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
+    
+    
+    /*******************************************************************/
+    /* INDEPENDENCE: HULL-WHITE PSEUDO-RANDOM                          */
+    /*******************************************************************/
+    
+    
+    start = std::chrono::steady_clock::now();
+    Matrix cvaDvaIndHw(exmpSwapTenors.size(),5);
+    
+    for(int i=0;i<exmpSwapTenors.size();i++) {
+        cvaDvaIndHw[i][0]=years(exmpSwapTenors[i]);
+        //one step per week
+        Size nTimeSteps=52*years(exmpSwapTenors[i]);
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(atmSwapVec[i]);
+        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
+                                      rhoHw,hwModel, cirCptModel, cirBankModel,
+                                      cptRecovery, bankRecovery);
+        
+        cvaDvaIndHw[i][1]=tempMatrix[0][0];
+        cvaDvaIndHw[i][2]= qNorm95*tempMatrix[1][0];
+        cvaDvaIndHw[i][3]=tempMatrix[0][1];
+        cvaDvaIndHw[i][4]=qNorm95*tempMatrix[1][1];
+        
+    }
+    
+    std::cout << std::endl << "Hull-White Pseudo-Random:"<<std::endl;
+    printMatrix(cvaDvaIndHw);
+    std::cout << std::endl;
+    
+    end = std::chrono::steady_clock::now();
+    
+    diff = end - start;
+    
+    std::cout << "Monte Carlo Sample (Hull-White Pseudo-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
+    
 }
 
 #endif /* MonteCarloSample_hpp */

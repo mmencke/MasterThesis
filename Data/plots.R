@@ -55,7 +55,8 @@ theme_cbs <- function(){
                                       colour = cbs.lightgrey), 
       panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
                                       colour = cbs.lightgrey),
-      text=element_text(size=20, family="Adobe Garamond Pro")
+      text=element_text(size=20, family="Adobe Garamond Pro"),
+      plot.margin=unit(c(1,1,1,1), "cm")
     )
 }
 
@@ -604,8 +605,6 @@ yfit <- dnorm(xfit, mean = 0, sd = g2_x1_sd)
 
 true_density<-data.frame(xfit,yfit)
 
-plot(true_density)
-
 
 p_x1_density<-ggplot(data=true_density) +  
   geom_point(aes(x=xfit,y=yfit,colour="x_1"),show.legend = F)+
@@ -616,6 +615,121 @@ p_x1_density<-ggplot(data=true_density) +
 
 ggsave("ROutput/swap-npv-shift.pdf", arrangeGrob(p_x1_density, p_swap_npv_shift,nrow=1),width=16, height = 9)
 embed_fonts("ROutput/swap-npv-shift.pdf")
+
+#########################################
+# MONTE CARLO SAMPLE             #
+#########################################
+
+folder<-"/Users/mmencke/Documents/GitHub/MasterThesis/DerivedData/Build/Products/Debug"
+
+cva_dva_sample<-load.matrix(folder, "cvaDvaSample.csv")
+cva_dva_sample$V5<-cva_dva_sample$V3+cva_dva_sample$V4
+cva_dva_sample$V6<- -cva_dva_sample$V1+cva_dva_sample$V2
+
+p_bva_sample<-ggplot(data=cva_dva_sample) +  
+  geom_point(aes(x=V5,y=V6,colour="x_1"),show.legend = F)+
+  scale_colour_manual(values=c("x_1"=cbs.blue))+
+  labs(colour="Legend", x=expression(x[1]+x[2]),y="BVA",title="G2++ Pseudo-Random")+
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) +
+  theme_cbs()
+p_bva_sample
+
+ggsave("ROutput/bva-sample.pdf",p_bva_sample,width=16, height = 9)
+embed_fonts("ROutput/bva-sample.pdf")
+
+
+cva_dva_sample_sobol<-load.matrix(folder, "cvaDvaSampleSobol.csv")
+cva_dva_sample_sobol$V5<-cva_dva_sample_sobol$V3+cva_dva_sample_sobol$V4
+cva_dva_sample_sobol$V6<- -cva_dva_sample_sobol$V1+cva_dva_sample_sobol$V2
+
+p_bva_sample_sobol<-ggplot(data=cva_dva_sample_sobol) +  
+  geom_point(aes(x=V5,y=V6,colour="x_1"),show.legend = F)+
+  scale_colour_manual(values=c("x_1"=cbs.blue))+
+  labs(colour="Legend", x=expression(x[1]+x[2]),y="BVA",title="G2++ Quasi-Random")+
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) +
+  theme_cbs()
+p_bva_sample_sobol
+
+ggsave("ROutput/bva-sample-sobol.pdf",p_bva_sample_sobol,width=16, height = 9)
+embed_fonts("ROutput/bva-sample-sobol.pdf")
+
+
+cva_dva_sample_hw<-load.matrix(folder, "cvaDvaSampleHw.csv")
+cva_dva_sample_hw$V5<-cva_dva_sample_hw$V3
+cva_dva_sample_hw$V6<- -cva_dva_sample_hw$V1+cva_dva_sample_hw$V2
+
+p_bva_sample_hw<-ggplot(data=cva_dva_sample_hw) +  
+  geom_point(aes(x=V5,y=V6,colour="x"),show.legend = F)+
+  scale_colour_manual(values=c("x"=cbs.blue))+
+  labs(colour="Legend", x=expression(x),y="BVA",title="Hull-White Pseudo-Random")+
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) +
+  theme_cbs()
+p_bva_sample_hw
+
+ggsave("ROutput/bva-sample-hw.pdf",p_bva_sample_hw,width=16, height = 9)
+embed_fonts("ROutput/bva-sample-hw.pdf")
+
+
+dva_lower_threshold<-1
+dva_upper_threshold<-50000000
+
+hw_dva<-cva_dva_sample_hw$V2[data.table::between(cva_dva_sample_hw$V2,dva_lower_threshold,dva_upper_threshold)]
+hw_dva<-data.frame(hw_dva)
+names(hw_dva)<-"value"
+hw_dva$Model<-"Hull-White"
+
+g2_dva<-cva_dva_sample$V2[data.table::between(cva_dva_sample$V2,dva_lower_threshold,dva_upper_threshold)]
+g2_dva<-data.frame(g2_dva)
+names(g2_dva)<-"value"
+g2_dva$Model<-"G2"
+
+# g2_sobol_dva<-cva_dva_sample_sobol$V2[cva_dva_sample_sobol$V2>dva_threshold]
+# g2_sobol_dva<-data.frame(g2_sobol_dva)
+# names(g2_sobol_dva)<-"value"
+# g2_sobol_dva$Model<-"G2 (Sobol)"
+#compare_dva<-rbind(hw_dva, g2_dva, g2_sobol_dva)
+
+compare_dva<-rbind(hw_dva, g2_dva)
+
+ggplot(compare_dva, aes(value, fill = Model)) + 
+  geom_density(alpha = 0.2)+
+  labs(variable="Legend", x="DVA",y="Density")+
+  scale_x_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) +
+  scale_colour_manual(values=palette(),aesthetics="fill")+
+  theme_cbs()
+
+hist(hw_dva$value,breaks=100)
+hist(g2_dva$value,breaks=100)
+mean(hw_dva$value)
+mean(g2_dva$value)
+
+sum(cva_dva_sample_hw$V2==0)
+sum(cva_dva_sample$V2==0)
+
+sum(cva_dva_sample_hw$V1==0)
+sum(cva_dva_sample$V1==0)
+
+
+sum(cva_dva_sample_hw$V1+cva_dva_sample_hw$V2==0)
+sum(cva_dva_sample$V1+cva_dva_sample$V2==0)
+
+
+x<-ifelse(cva_dva_sample_hw$V1>0,1,0)
+y<-ifelse(cva_dva_sample_hw$V2>0,1,0)
+
+z<-x+y
+
+sum(z) #where DVA or CVA>0
+length(z)-sum(z) #where DVA and CVA =0
+
+
+# 
+# par(mfrow=c(1,3))
+# hist(cva_dva_sample_hw$V6[cva_dva_sample_hw$V6!=0],breaks=100,main="Hull-White")
+# hist(cva_dva_sample$V6[cva_dva_sample$V6!=0],breaks=100,main="G2++ (Pseudo-Random)")
+# hist(cva_dva_sample_sobol$V6[cva_dva_sample_sobol$V6!=0],breaks=100,main="G2++ (Quasi-Random)")
+
+
 
 #########################################
 # TRANSFORM DATA TO TABLES              #
@@ -689,4 +803,102 @@ for(i in 1:dim(cva_dva_rwr)[1]) {
 
 write.table(cva_dva_rwr_output, file="ROutput/cva-dva-rwr-output.csv",
             quote=F, sep=";", col.names = F,row.names = F)
+
+
+
+#########################################
+# SOBOL             #
+#########################################
+
+sobol<-data.table::fread("/Users/mmencke/Documents/GitHub/MasterThesis/DerivedData/Build/Products/Debug/sobol.csv",
+                  header=F,
+                  sep=",")
+
+
+dim(sobol)
+
+#index<-seq(1,1024*250,250)
+
+index<-1025:2048
+
+
+#index<-1:256000
+
+x1<-sobol$V1[index]
+x2<-sobol$V2[index]
+x3<-sobol$V3[index]
+x4<-sobol$V4[index]
+
+
+par(mfrow=c(3,2))
+plot(x1,x2)
+plot(x1,x3)
+plot(x1,x4)
+plot(x2,x3)
+plot(x2,x4)
+plot(x3,x4)
+
+par(mfrow=c(4,1))
+plot(density(x1))
+plot(density(x2))
+plot(density(x3))
+plot(density(x4))
+
+
+
+sobol2<-data.table::fread("/Users/mmencke/Documents/GitHub/MasterThesis/DerivedData/Build/Products/Debug/sobol2.csv",
+                         header=F,
+                         sep=",")
+
+plot(sobol2$V4[index]-sobol$V4[index])
+
+
+wiener<-matrix(NA,nrow=1024,ncol=251)
+
+dt<-1/250
+
+
+k<-1
+
+for(l in 0:1023){
+  wiener[l+1,1]<-0
+  for(i in 0:249){
+    wiener[l+1,i+2]<- wiener[l+1,i+1]+sqrt(dt)*sobol2$V1[k]
+    k<-k+1
+  }
+}
+
+par(mfrow=c(1,1))
+
+plot(wiener[1,],ylim=c(-2,2))
+
+
+for(i in 2:1024) {
+  points(wiener[i,],col=i)
+}
+
+
+wiener2<-matrix(NA,nrow=1024,ncol=251)
+
+for(l in 0:1023){
+  wiener2[l+1,1]<-0
+  for(i in 0:249){
+    wiener2[l+1,i+2]<- wiener2[l+1,i+1]+sqrt(dt)*rnorm(1)
+  }
+}
+
+plot(wiener2[1,],ylim=c(-2,2))
+
+
+for(i in 2:1024) {
+  points(wiener2[i,],col=i)
+}
+
+
+plot(density(wiener2[,251]))
+
+warnings()
+
+plot(w)
+
 

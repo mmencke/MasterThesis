@@ -18,7 +18,6 @@
 #include "SwapNpvShift.hpp"
 #include "MonteCarloSample.hpp"
 
-
 int main() {
     
     bool run_section;
@@ -83,7 +82,7 @@ int main() {
     /* MONTE CARLO CVA AND DVA                                         */
     /*******************************************************************/
     
-    run_section = false;
+    run_section = true;
     if(run_section) {
         newSection("CVA and DVA by Monte Carlo");
         mcCva();
@@ -106,11 +105,10 @@ int main() {
     // Every time the Monte Carlo simulation is run, the samples are output along with the realisation of the Gaussian Factors.
     // We want to investigate the 30y independent ATM case, so this is run here alone to overwrite the csv.
     
-    run_section = true;
+    run_section = false;
     if(run_section) {
         newSection("Monte Carlo Sample (Single Maturity)");
         monteCarloSample();
     }
-    
     return 0;
 }

@@ -19,6 +19,17 @@ Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap> > swapPortfol
                           Matrix rho, ext::shared_ptr<G2> interestRate, ext::shared_ptr<CoxIngersollRoss> ctptyIntensity, ext::shared_ptr<CoxIngersollRoss> invstIntensity,
                           Real ctptyRecovery, Real invstRecovery);
 
+Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap> > swapPortfolio,
+                          ext::shared_ptr<MersenneTwisterUniformRng> uniformGenerator, ext::shared_ptr<SobolRsg>, Size nTimeSteps, Size nSamples,
+                          Matrix rho, ext::shared_ptr<G2> interestRate, ext::shared_ptr<CoxIngersollRoss> ctptyIntensity, ext::shared_ptr<CoxIngersollRoss> invstIntensity,
+                          Real ctptyRecovery, Real invstRecovery);
+
+
+Matrix mcCvaSwapPortfolio(std::vector<ext::shared_ptr<VanillaSwap> > swapPortfolio,
+                          ext::shared_ptr<MersenneTwisterUniformRng> uniformGenerator, Size nTimeSteps, Size nSamples,
+                          Matrix rho, ext::shared_ptr<HullWhite> interestRate, ext::shared_ptr<CoxIngersollRoss> ctptyIntensity, ext::shared_ptr<CoxIngersollRoss> invstIntensity,
+                          Real ctptyRecovery, Real invstRecovery);
+
 inline void mcCva() {
     
     
@@ -79,14 +90,12 @@ inline void mcCva() {
     /*******************************************************************/
     
     ext::shared_ptr<G2> g2Model(new G2(yieldCurveHandle));
-    ext::shared_ptr<PricingEngine> g2Engine(new G2SwaptionEngine(g2Model,4, 100));//±4 standard deviations wide with 100 intervals
  
 
     Array g2Params={0.00549236,0.00970193,0.00550213,0.00955238,-0.759051};
     g2Model->setParams(g2Params);
     
     ext::shared_ptr<HullWhite> hwModel(new HullWhite(yieldCurveHandle));
-    ext::shared_ptr<PricingEngine> hwEngine(new JamshidianSwaptionEngine(hwModel,yieldCurveHandle));
     
     Array hwParams={0.00531006,0.00673971};
     hwModel->setParams(hwParams);
@@ -94,7 +103,7 @@ inline void mcCva() {
     
     
     /*******************************************************************/
-    /* BOOTSTRAPPING HAZARD RATES                              */
+    /* BOOTSTRAPPING HAZARD RATES                                      */
     /*******************************************************************/
     
     Matrix cdsSpreadBank = readCsv("/Users/mmencke/Documents/GitHub/MasterThesis/Data/CppInput/bankCdsSpreads.csv");
@@ -141,8 +150,8 @@ inline void mcCva() {
     
     Handle<YieldTermStructure> equivalentHandleBank(equivalentPtrBank);
     
-    //from page 125 in Brigo, Morini and Pallavicini
-    Real kappa=0.4;
+    // Parameters from [Brigo, Morini and Pallavicini (2013), p. 125]
+    Real kappa = 0.4;
     Real theta = 0.026;
     Real sigma = 0.14;
     Real lambda0 = 0.0165;
@@ -272,127 +281,349 @@ inline void mcCva() {
     Matrix tempMatrix;
 
     /*******************************************************************/
-    /* INDEPENDENCE                                                    */
+    /* INDEPENDENCE: G2++ PSEUDO-RANDOM                                */
     /*******************************************************************/
 
     start = std::chrono::steady_clock::now();
-    Matrix cvaDvaInd(exmpSwapTenors.size(),13);
+    Matrix cvaDvaInd(exmpSwapTenors.size(), 13);
 
     for(int i=0;i<exmpSwapTenors.size();i++) {
-        cvaDvaInd[i][0]=years(exmpSwapTenors[i]);
+        cvaDvaInd[i][0] = years(exmpSwapTenors[i]);
         //one step per week
-        Size nTimeSteps=52*years(exmpSwapTenors[i]);
+        Size nTimeSteps = 52*years(exmpSwapTenors[i]);
         
         tempSvapVec.clear();
         tempSvapVec.push_back(atmSwapVec[i]);
         
-        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
-                                      rho,g2Model, cirCptModel, cirBankModel,
-                                      cptRecovery, bankRecovery);
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
         
-        cvaDvaInd[i][1]=tempMatrix[0][0];
-        cvaDvaInd[i][2]= qNorm95*tempMatrix[1][0];
-        cvaDvaInd[i][3]=tempMatrix[0][1];
-        cvaDvaInd[i][4]=qNorm95*tempMatrix[1][1];
+        cvaDvaInd[i][1] = tempMatrix[0][0];
+        cvaDvaInd[i][2] = qNorm95*tempMatrix[1][0];
+        cvaDvaInd[i][3] = tempMatrix[0][1];
+        cvaDvaInd[i][4] = qNorm95*tempMatrix[1][1];
         
         tempSvapVec.clear();
         tempSvapVec.push_back(itmSwapVec[i]);
         
-        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
-                                      rho,g2Model, cirCptModel, cirBankModel,
-                                      cptRecovery, bankRecovery);
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
         
-        cvaDvaInd[i][5]=tempMatrix[0][0];
-        cvaDvaInd[i][6]= qNorm95*tempMatrix[1][0];
-        cvaDvaInd[i][7]=tempMatrix[0][1];
-        cvaDvaInd[i][8]=qNorm95*tempMatrix[1][1];
+        cvaDvaInd[i][5] = tempMatrix[0][0];
+        cvaDvaInd[i][6] = qNorm95*tempMatrix[1][0];
+        cvaDvaInd[i][7] = tempMatrix[0][1];
+        cvaDvaInd[i][8] = qNorm95*tempMatrix[1][1];
         
         tempSvapVec.clear();
         tempSvapVec.push_back(otmSwapVec[i]);
         
-        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
-                                      rho,g2Model, cirCptModel, cirBankModel,
-                                      cptRecovery, bankRecovery);
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
         
-        cvaDvaInd[i][9]=tempMatrix[0][0];
-        cvaDvaInd[i][10]= qNorm95*tempMatrix[1][0];
-        cvaDvaInd[i][11]=tempMatrix[0][1];
-        cvaDvaInd[i][12]=qNorm95*tempMatrix[1][1];
+        cvaDvaInd[i][9] = tempMatrix[0][0];
+        cvaDvaInd[i][10] = qNorm95*tempMatrix[1][0];
+        cvaDvaInd[i][11] = tempMatrix[0][1];
+        cvaDvaInd[i][12] = qNorm95*tempMatrix[1][1];
         
     }
     
-    writeCsv(cvaDvaInd,"cvaDvaInd.csv");
+    writeCsv(cvaDvaInd, "cvaDvaInd.csv");
     
     end = std::chrono::steady_clock::now();
     
     diff = end - start;
 
-    std::cout << "Independent: Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
-
+    std::cout << "Independent (G2++ Pseudo-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
+    
     /*******************************************************************/
-    /* WRONG WAY RISK                                                  */
+    /* INDEPENDENCE: G2++ QUASI-RANDOM                                 */
+    /*******************************************************************/
+    
+    start = std::chrono::steady_clock::now();
+    Matrix cvaDvaIndSobol(exmpSwapTenors.size(), 13);
+    
+    for(int i=0;i<exmpSwapTenors.size();i++) {
+        cvaDvaIndSobol[i][0] = years(exmpSwapTenors[i]);
+        //one step per week
+        Size nTimeSteps = 52*years(exmpSwapTenors[i]);
+        
+        ext::shared_ptr<SobolRsg> sobolRsg(new SobolRsg(4*nTimeSteps,seed));
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(atmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, sobolRsg, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaIndSobol[i][1] = tempMatrix[0][0];
+        cvaDvaIndSobol[i][2] = qNorm95*tempMatrix[1][0];
+        cvaDvaIndSobol[i][3] = tempMatrix[0][1];
+        cvaDvaIndSobol[i][4] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(itmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, sobolRsg, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaIndSobol[i][5] = tempMatrix[0][0];
+        cvaDvaIndSobol[i][6] = qNorm95*tempMatrix[1][0];
+        cvaDvaIndSobol[i][7] = tempMatrix[0][1];
+        cvaDvaIndSobol[i][8] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(otmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, sobolRsg, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaIndSobol[i][9] = tempMatrix[0][0];
+        cvaDvaIndSobol[i][10] = qNorm95*tempMatrix[1][0];
+        cvaDvaIndSobol[i][11] = tempMatrix[0][1];
+        cvaDvaIndSobol[i][12] = qNorm95*tempMatrix[1][1];
+        
+    }
+    
+    writeCsv(cvaDvaIndSobol, "cvaDvaIndSobol.csv");
+    
+    end = std::chrono::steady_clock::now();
+    
+    diff = end - start;
+    
+    std::cout << "Independent (G2++ Quasi-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
+    
+    /*******************************************************************/
+    /* INDEPENDENCE: HULL-WHITE PSEUDO-RANDOM                          */
+    /*******************************************************************/
+    
+    start = std::chrono::steady_clock::now();
+    Matrix cvaDvaIndHw(exmpSwapTenors.size(), 13);
+    
+    Matrix rhoHw(3,3,0);
+    rhoHw[0][0]=rhoHw[1][1]=rhoHw[2][2]=1;
+    
+    for(int i=0;i<exmpSwapTenors.size();i++) {
+        cvaDvaIndHw[i][0] = years(exmpSwapTenors[i]);
+        //one step per week
+        Size nTimeSteps = 52*years(exmpSwapTenors[i]);
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(atmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rhoHw, hwModel, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaIndHw[i][1] = tempMatrix[0][0];
+        cvaDvaIndHw[i][2] = qNorm95*tempMatrix[1][0];
+        cvaDvaIndHw[i][3] = tempMatrix[0][1];
+        cvaDvaIndHw[i][4] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(itmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rhoHw, hwModel, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaIndHw[i][5] = tempMatrix[0][0];
+        cvaDvaIndHw[i][6] = qNorm95*tempMatrix[1][0];
+        cvaDvaIndHw[i][7] = tempMatrix[0][1];
+        cvaDvaIndHw[i][8] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(otmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rhoHw, hwModel, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaIndHw[i][9] = tempMatrix[0][0];
+        cvaDvaIndHw[i][10] = qNorm95*tempMatrix[1][0];
+        cvaDvaIndHw[i][11] = tempMatrix[0][1];
+        cvaDvaIndHw[i][12] = qNorm95*tempMatrix[1][1];
+        
+    }
+    
+    writeCsv(cvaDvaIndHw, "cvaDvaIndHw.csv");
+    
+    end = std::chrono::steady_clock::now();
+    
+    diff = end - start;
+    
+    std::cout << "Independent (Hull-White Pseudo-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
+    
+    /*******************************************************************/
+    /* WRONG WAY RISK: G2++ PSEUDO-RANDOM                              */
     /*******************************************************************/
 
     rho[0][2]=rho[2][0]=-0.05;
     rho[1][2]=rho[2][1]=0.7505596;
     
     start = std::chrono::steady_clock::now();
-    Matrix cvaDvaWwr(exmpSwapTenors.size(),13);
+    Matrix cvaDvaWwr(exmpSwapTenors.size(), 13);
     
     for(int i=0;i<exmpSwapTenors.size();i++) {
-        cvaDvaWwr[i][0]=years(exmpSwapTenors[i]);
+        cvaDvaWwr[i][0] = years(exmpSwapTenors[i]);
         
-        Size nTimeSteps=52*years(exmpSwapTenors[i]);
+        Size nTimeSteps = 52*years(exmpSwapTenors[i]);
         
         tempSvapVec.clear();
         tempSvapVec.push_back(atmSwapVec[i]);
         
-        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
-                                      rho,g2Model, cirCptModel, cirBankModel,
-                                      cptRecovery, bankRecovery);
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
         
-        cvaDvaWwr[i][1]=tempMatrix[0][0];
-        cvaDvaWwr[i][2]= qNorm95*tempMatrix[1][0];
-        cvaDvaWwr[i][3]=tempMatrix[0][1];
-        cvaDvaWwr[i][4]=qNorm95*tempMatrix[1][1];
+        cvaDvaWwr[i][1] = tempMatrix[0][0];
+        cvaDvaWwr[i][2] = qNorm95*tempMatrix[1][0];
+        cvaDvaWwr[i][3] = tempMatrix[0][1];
+        cvaDvaWwr[i][4] = qNorm95*tempMatrix[1][1];
         
         tempSvapVec.clear();
         tempSvapVec.push_back(itmSwapVec[i]);
         
-        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
-                                      rho,g2Model, cirCptModel, cirBankModel,
-                                      cptRecovery, bankRecovery);
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
         
-        cvaDvaWwr[i][5]=tempMatrix[0][0];
-        cvaDvaWwr[i][6]= qNorm95*tempMatrix[1][0];
-        cvaDvaWwr[i][7]=tempMatrix[0][1];
-        cvaDvaWwr[i][8]=qNorm95*tempMatrix[1][1];
+        cvaDvaWwr[i][5] = tempMatrix[0][0];
+        cvaDvaWwr[i][6] = qNorm95*tempMatrix[1][0];
+        cvaDvaWwr[i][7] = tempMatrix[0][1];
+        cvaDvaWwr[i][8] = qNorm95*tempMatrix[1][1];
         
         tempSvapVec.clear();
         tempSvapVec.push_back(otmSwapVec[i]);
         
-        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
-                                      rho,g2Model, cirCptModel, cirBankModel,
-                                      cptRecovery, bankRecovery);
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
         
-        cvaDvaWwr[i][9]=tempMatrix[0][0];
-        cvaDvaWwr[i][10]= qNorm95*tempMatrix[1][0];
-        cvaDvaWwr[i][11]=tempMatrix[0][1];
-        cvaDvaWwr[i][12]=qNorm95*tempMatrix[1][1];
+        cvaDvaWwr[i][9] = tempMatrix[0][0];
+        cvaDvaWwr[i][10] = qNorm95*tempMatrix[1][0];
+        cvaDvaWwr[i][11] = tempMatrix[0][1];
+        cvaDvaWwr[i][12] = qNorm95*tempMatrix[1][1];
         
     }
     
-    writeCsv(cvaDvaWwr,"cvaDvaWwr.csv");
+    writeCsv(cvaDvaWwr, "cvaDvaWwr.csv");
     
     end = std::chrono::steady_clock::now();
     
     diff = end - start;
     
-    std::cout << "Wrong Way Risk: Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
+    std::cout << "Wrong Way Risk (G2++ Pseudo-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
     
+    /*******************************************************************/
+    /* WRONG WAY RISK: G2++ QUASI-RANDOM                               */
+    /*******************************************************************/
+    
+    start = std::chrono::steady_clock::now();
+    Matrix cvaDvaWwrSobol(exmpSwapTenors.size(), 13);
+    
+    for(int i=0;i<exmpSwapTenors.size();i++) {
+        cvaDvaWwrSobol[i][0] = years(exmpSwapTenors[i]);
+        //one step per week
+        Size nTimeSteps = 52*years(exmpSwapTenors[i]);
+        
+        ext::shared_ptr<SobolRsg> sobolRsg(new SobolRsg(4*nTimeSteps, seed));
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(atmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, sobolRsg, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaWwrSobol[i][1] = tempMatrix[0][0];
+        cvaDvaWwrSobol[i][2] = qNorm95*tempMatrix[1][0];
+        cvaDvaWwrSobol[i][3] = tempMatrix[0][1];
+        cvaDvaWwrSobol[i][4] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(itmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, sobolRsg, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaWwrSobol[i][5] = tempMatrix[0][0];
+        cvaDvaWwrSobol[i][6] = qNorm95*tempMatrix[1][0];
+        cvaDvaWwrSobol[i][7] = tempMatrix[0][1];
+        cvaDvaWwrSobol[i][8] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(otmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, sobolRsg, nTimeSteps, nSamples,
+                                        rho,g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaWwrSobol[i][9] = tempMatrix[0][0];
+        cvaDvaWwrSobol[i][10] = qNorm95*tempMatrix[1][0];
+        cvaDvaWwrSobol[i][11] = tempMatrix[0][1];
+        cvaDvaWwrSobol[i][12] = qNorm95*tempMatrix[1][1];
+        
+    }
+    
+    writeCsv(cvaDvaWwrSobol, "cvaDvaWwrSobol.csv");
+    
+    end = std::chrono::steady_clock::now();
+    
+    diff = end - start;
+    
+    std::cout << "Wrong Way Risk (G2++ Quasi-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
+    
+    /*******************************************************************/
+    /* WRONG WAY RISK: HULL-WHITE PSEUDO-RANDOM                        */
+    /*******************************************************************/
+    
+    start = std::chrono::steady_clock::now();
+    Matrix cvaDvaWwrHw(exmpSwapTenors.size(),13);
+
+    rhoHw[0][1]=rhoHw[1][0]=1;
+    
+    for(int i=0;i<exmpSwapTenors.size();i++) {
+        cvaDvaWwrHw[i][0] = years(exmpSwapTenors[i]);
+        //one step per week
+        Size nTimeSteps = 52*years(exmpSwapTenors[i]);
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(atmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rhoHw, hwModel, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaWwrHw[i][1] = tempMatrix[0][0];
+        cvaDvaWwrHw[i][2] = qNorm95*tempMatrix[1][0];
+        cvaDvaWwrHw[i][3] = tempMatrix[0][1];
+        cvaDvaWwrHw[i][4] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(itmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rhoHw, hwModel, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaWwrHw[i][5] = tempMatrix[0][0];
+        cvaDvaWwrHw[i][6] = qNorm95*tempMatrix[1][0];
+        cvaDvaWwrHw[i][7] = tempMatrix[0][1];
+        cvaDvaWwrHw[i][8] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(otmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rhoHw, hwModel, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaWwrHw[i][9] = tempMatrix[0][0];
+        cvaDvaWwrHw[i][10] = qNorm95*tempMatrix[1][0];
+        cvaDvaWwrHw[i][11] = tempMatrix[0][1];
+        cvaDvaWwrHw[i][12] = qNorm95*tempMatrix[1][1];
+        
+    }
+    
+    writeCsv(cvaDvaWwrHw, "cvaDvaWwrHw.csv");
+    
+    end = std::chrono::steady_clock::now();
+    
+    diff = end - start;
+    
+    std::cout << "Wrong Way Risk (Hull-White Pseudo-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
 
     /*******************************************************************/
-    /* RIGHT WAY RISK                                                  */
+    /* RIGHT WAY RISK: G2++ PSEUDO-RANDOM                              */
     /*******************************************************************/
 
     rho[1][2]=rho[2][1]=-0.648994;
@@ -401,56 +632,167 @@ inline void mcCva() {
     Matrix cvaDvaRwr(exmpSwapTenors.size(),13);
     
     for(int i=0;i<exmpSwapTenors.size();i++) {
-        cvaDvaRwr[i][0]=years(exmpSwapTenors[i]);
-        
-        Size nTimeSteps=52*years(exmpSwapTenors[i]);
+        cvaDvaRwr[i][0] = years(exmpSwapTenors[i]);
+        //one step per week
+        Size nTimeSteps = 52*years(exmpSwapTenors[i]);
         
         tempSvapVec.clear();
         tempSvapVec.push_back(atmSwapVec[i]);
         
-        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
-                                      rho,g2Model, cirCptModel, cirBankModel,
-                                      cptRecovery, bankRecovery);
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
         
-        cvaDvaRwr[i][1]=tempMatrix[0][0];
-        cvaDvaRwr[i][2]= qNorm95*tempMatrix[1][0];
-        cvaDvaRwr[i][3]=tempMatrix[0][1];
-        cvaDvaRwr[i][4]=qNorm95*tempMatrix[1][1];
+        cvaDvaRwr[i][1] = tempMatrix[0][0];
+        cvaDvaRwr[i][2] = qNorm95*tempMatrix[1][0];
+        cvaDvaRwr[i][3] = tempMatrix[0][1];
+        cvaDvaRwr[i][4] = qNorm95*tempMatrix[1][1];
         
         tempSvapVec.clear();
         tempSvapVec.push_back(itmSwapVec[i]);
         
-        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
-                                      rho,g2Model, cirCptModel, cirBankModel,
-                                      cptRecovery, bankRecovery);
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
         
-        cvaDvaRwr[i][5]=tempMatrix[0][0];
-        cvaDvaRwr[i][6]= qNorm95*tempMatrix[1][0];
-        cvaDvaRwr[i][7]=tempMatrix[0][1];
-        cvaDvaRwr[i][8]=qNorm95*tempMatrix[1][1];
+        cvaDvaRwr[i][5] = tempMatrix[0][0];
+        cvaDvaRwr[i][6] = qNorm95*tempMatrix[1][0];
+        cvaDvaRwr[i][7] = tempMatrix[0][1];
+        cvaDvaRwr[i][8] = qNorm95*tempMatrix[1][1];
         
         tempSvapVec.clear();
         tempSvapVec.push_back(otmSwapVec[i]);
         
-        tempMatrix=mcCvaSwapPortfolio(tempSvapVec,uniformGenerator,nTimeSteps,nSamples,
-                                      rho,g2Model, cirCptModel, cirBankModel,
-                                      cptRecovery, bankRecovery);
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
         
-        cvaDvaRwr[i][9]=tempMatrix[0][0];
-        cvaDvaRwr[i][10]= qNorm95*tempMatrix[1][0];
-        cvaDvaRwr[i][11]=tempMatrix[0][1];
-        cvaDvaRwr[i][12]=qNorm95*tempMatrix[1][1];
+        cvaDvaRwr[i][9] = tempMatrix[0][0];
+        cvaDvaRwr[i][10] = qNorm95*tempMatrix[1][0];
+        cvaDvaRwr[i][11] = tempMatrix[0][1];
+        cvaDvaRwr[i][12] = qNorm95*tempMatrix[1][1];
         
     }
     
-    writeCsv(cvaDvaRwr,"cvaDvaRwr.csv");
+    writeCsv(cvaDvaRwr, "cvaDvaRwr.csv");
     
     end = std::chrono::steady_clock::now();
     
     diff = end - start;
     
-    std::cout << "Right Way Risk: Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
+    std::cout << "Right Way Risk (G2++ Pseudo-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
 
+    
+    /*******************************************************************/
+    /* RIGHT WAY RISK: G2++ QUASI-RANDOM                               */
+    /*******************************************************************/
+    
+    start = std::chrono::steady_clock::now();
+    Matrix cvaDvaRwrSobol(exmpSwapTenors.size(),13);
+    
+    for(int i=0;i<exmpSwapTenors.size();i++) {
+        cvaDvaRwrSobol[i][0] = years(exmpSwapTenors[i]);
+        //one step per week
+        Size nTimeSteps = 52*years(exmpSwapTenors[i]);
+        
+        ext::shared_ptr<SobolRsg> sobolRsg(new SobolRsg(4*nTimeSteps, seed));
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(atmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, sobolRsg, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaRwrSobol[i][1] = tempMatrix[0][0];
+        cvaDvaRwrSobol[i][2] = qNorm95*tempMatrix[1][0];
+        cvaDvaRwrSobol[i][3] = tempMatrix[0][1];
+        cvaDvaRwrSobol[i][4] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(itmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, sobolRsg, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaRwrSobol[i][5] = tempMatrix[0][0];
+        cvaDvaRwrSobol[i][6] = qNorm95*tempMatrix[1][0];
+        cvaDvaRwrSobol[i][7] = tempMatrix[0][1];
+        cvaDvaRwrSobol[i][8] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(otmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, sobolRsg, nTimeSteps, nSamples,
+                                        rho, g2Model, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaRwrSobol[i][9] = tempMatrix[0][0];
+        cvaDvaRwrSobol[i][10] = qNorm95*tempMatrix[1][0];
+        cvaDvaRwrSobol[i][11] = tempMatrix[0][1];
+        cvaDvaRwrSobol[i][12] = qNorm95*tempMatrix[1][1];
+        
+    }
+    
+    writeCsv(cvaDvaRwrSobol, "cvaDvaRwrSobol.csv");
+    
+    end = std::chrono::steady_clock::now();
+    
+    diff = end - start;
+    
+    std::cout << "Right Way Risk (G2++ Quasi-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
+    
+    /*******************************************************************/
+    /* RIGHT WAY RISK: HULL-WHITE PSEUDO-RANDOM                        */
+    /*******************************************************************/
+    
+    start = std::chrono::steady_clock::now();
+    Matrix cvaDvaRwrHw(exmpSwapTenors.size(), 13);
+    
+    rhoHw[0][1]=rhoHw[1][0]=-1;
+    
+    for(int i=0;i<exmpSwapTenors.size();i++) {
+        cvaDvaRwrHw[i][0] = years(exmpSwapTenors[i]);
+        //one step per week
+        Size nTimeSteps = 52*years(exmpSwapTenors[i]);
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(atmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rhoHw, hwModel, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaRwrHw[i][1] = tempMatrix[0][0];
+        cvaDvaRwrHw[i][2] = qNorm95*tempMatrix[1][0];
+        cvaDvaRwrHw[i][3] = tempMatrix[0][1];
+        cvaDvaRwrHw[i][4] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(itmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rhoHw, hwModel, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaRwrHw[i][5] = tempMatrix[0][0];
+        cvaDvaRwrHw[i][6] = qNorm95*tempMatrix[1][0];
+        cvaDvaRwrHw[i][7] = tempMatrix[0][1];
+        cvaDvaRwrHw[i][8] = qNorm95*tempMatrix[1][1];
+        
+        tempSvapVec.clear();
+        tempSvapVec.push_back(otmSwapVec[i]);
+        
+        tempMatrix = mcCvaSwapPortfolio(tempSvapVec, uniformGenerator, nTimeSteps, nSamples,
+                                        rhoHw, hwModel, cirCptModel, cirBankModel, cptRecovery, bankRecovery);
+        
+        cvaDvaRwrHw[i][9] = tempMatrix[0][0];
+        cvaDvaRwrHw[i][10] = qNorm95*tempMatrix[1][0];
+        cvaDvaRwrHw[i][11] = tempMatrix[0][1];
+        cvaDvaRwrHw[i][12] = qNorm95*tempMatrix[1][1];
+        
+    }
+    
+    writeCsv(cvaDvaRwrHw, "cvaDvaRwrHw.csv");
+    
+    end = std::chrono::steady_clock::now();
+    
+    diff = end - start;
+    
+    std::cout << "Right Way Risk (Hull-White Pseudo-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
 }
 
 

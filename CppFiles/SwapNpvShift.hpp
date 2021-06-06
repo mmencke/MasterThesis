@@ -106,7 +106,6 @@ inline void swapNpvShift() {
     .withFloatingLegSpread(swapSpread)
     ;
     
-    
     Matrix swapNpvShift(201,2);
     
     for(int i=0;i<201;i++) {
@@ -144,6 +143,7 @@ inline void swapNpvShift() {
         swapNpvShift[i][1]=newSwap.NPV();
     }
     writeCsv(swapNpvShift,"swapNpvShift.csv");
+    
 }
 
 #endif /* SwapNpvShift_hpp */
