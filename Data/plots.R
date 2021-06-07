@@ -593,7 +593,6 @@ p_swap_npv_shift<-ggplot(data=swap_npv_shift) +
   scale_colour_manual(values=c("x_1"=cbs.blue))+
   labs(colour="Legend", x=expression(x[1]),y="NPV")+
   theme_cbs()
-p_swap_npv_shift
 
 kappa1<-0.00549236
 sigma1<-0.00970193
@@ -620,7 +619,7 @@ embed_fonts("ROutput/swap-npv-shift.pdf")
 # MONTE CARLO SAMPLE             #
 #########################################
 
-folder<-"/Users/mmencke/Documents/GitHub/MasterThesis/DerivedData/Build/Products/Debug"
+#folder<-"/Users/mmencke/Documents/GitHub/MasterThesis/DerivedData/Build/Products/Debug"
 
 cva_dva_sample<-load.matrix(folder, "cvaDvaSample.csv")
 cva_dva_sample$V5<-cva_dva_sample$V3+cva_dva_sample$V4
@@ -629,10 +628,9 @@ cva_dva_sample$V6<- -cva_dva_sample$V1+cva_dva_sample$V2
 p_bva_sample<-ggplot(data=cva_dva_sample) +  
   geom_point(aes(x=V5,y=V6,colour="x_1"),show.legend = F)+
   scale_colour_manual(values=c("x_1"=cbs.blue))+
-  labs(colour="Legend", x=expression(x[1]+x[2]),y="BVA",title="G2++ Pseudo-Random")+
+  labs(colour="Legend", x=expression(italic(x)[1](tau)+italic(x)[2](tau)),y="BVA",title="G2++ Pseudo-Random")+
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) +
   theme_cbs()
-p_bva_sample
 
 ggsave("ROutput/bva-sample.pdf",p_bva_sample,width=16, height = 9)
 embed_fonts("ROutput/bva-sample.pdf")
@@ -645,13 +643,9 @@ cva_dva_sample_sobol$V6<- -cva_dva_sample_sobol$V1+cva_dva_sample_sobol$V2
 p_bva_sample_sobol<-ggplot(data=cva_dva_sample_sobol) +  
   geom_point(aes(x=V5,y=V6,colour="x_1"),show.legend = F)+
   scale_colour_manual(values=c("x_1"=cbs.blue))+
-  labs(colour="Legend", x=expression(x[1]+x[2]),y="BVA",title="G2++ Quasi-Random")+
+  labs(colour="Legend", x=expression(italic(x)[1](tau)+italic(x)[2](tau)),y="BVA",title="G2++ Quasi-Random")+
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) +
   theme_cbs()
-p_bva_sample_sobol
-
-ggsave("ROutput/bva-sample-sobol.pdf",p_bva_sample_sobol,width=16, height = 9)
-embed_fonts("ROutput/bva-sample-sobol.pdf")
 
 
 cva_dva_sample_hw<-load.matrix(folder, "cvaDvaSampleHw.csv")
@@ -661,17 +655,16 @@ cva_dva_sample_hw$V6<- -cva_dva_sample_hw$V1+cva_dva_sample_hw$V2
 p_bva_sample_hw<-ggplot(data=cva_dva_sample_hw) +  
   geom_point(aes(x=V5,y=V6,colour="x"),show.legend = F)+
   scale_colour_manual(values=c("x"=cbs.blue))+
-  labs(colour="Legend", x=expression(x),y="BVA",title="Hull-White Pseudo-Random")+
+  labs(colour="Legend", x=expression(italic(x)(tau)),y="BVA",title="Hull-White Pseudo-Random")+
   scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) +
   theme_cbs()
-p_bva_sample_hw
 
-ggsave("ROutput/bva-sample-hw.pdf",p_bva_sample_hw,width=16, height = 9)
-embed_fonts("ROutput/bva-sample-hw.pdf")
+ggsave("ROutput/bva-sample-all.pdf", arrangeGrob(p_bva_sample, p_bva_sample_sobol, p_bva_sample_hw, nrow=2),width=16, height = 9)
+embed_fonts("ROutput/bva-sample-all.pdf")
 
 
-dva_lower_threshold<-1
-dva_upper_threshold<-50000000
+dva_lower_threshold<-0
+dva_upper_threshold<-9000000
 
 hw_dva<-cva_dva_sample_hw$V2[data.table::between(cva_dva_sample_hw$V2,dva_lower_threshold,dva_upper_threshold)]
 hw_dva<-data.frame(hw_dva)
@@ -714,26 +707,19 @@ sum(cva_dva_sample_hw$V1+cva_dva_sample_hw$V2==0)
 sum(cva_dva_sample$V1+cva_dva_sample$V2==0)
 
 
-x<-ifelse(cva_dva_sample_hw$V1>0,1,0)
-y<-ifelse(cva_dva_sample_hw$V2>0,1,0)
+x<-ifelse(cva_dva_sample$V1>0,1,0)
+y<-ifelse(cva_dva_sample$V2>0,1,0)
 
 z<-x+y
 
 sum(z) #where DVA or CVA>0
 length(z)-sum(z) #where DVA and CVA =0
 
-
-# 
-# par(mfrow=c(1,3))
-# hist(cva_dva_sample_hw$V6[cva_dva_sample_hw$V6!=0],breaks=100,main="Hull-White")
-# hist(cva_dva_sample$V6[cva_dva_sample$V6!=0],breaks=100,main="G2++ (Pseudo-Random)")
-# hist(cva_dva_sample_sobol$V6[cva_dva_sample_sobol$V6!=0],breaks=100,main="G2++ (Quasi-Random)")
-
-
-
 #########################################
 # TRANSFORM DATA TO TABLES              #
 #########################################
+
+# THE SWAPS USED IN THE CALCULATIONS
 
 exmp_swaps<-load.matrix(folder, "exmpSwaps.csv")
 
@@ -748,9 +734,11 @@ for(i in 1:dim(exmp_swaps)[1]) {
   exmp_swaps_output$X6[i]<-format(round(exmp_swaps$V6[i]),big.mark = ",")
   exmp_swaps_output$X7[i]<-format(round(exmp_swaps$V7[i]),big.mark = ",")
 }
-write.table(exmp_swaps_output, file="ROutput/exmp-swaps-output.csv",
+write.table(exmp_swaps_output, file="ROutput/exmp-swaps.csv",
             quote=F, sep=";", col.names = F,row.names = F)
 
+
+# INDEPENDENCE: G2++ PSEUDO-RANDOM
 
 cva_dva_ind<-load.matrix(folder, "cvaDvaInd.csv")
 
@@ -766,9 +754,48 @@ for(i in 1:dim(cva_dva_ind)[1]) {
   cva_dva_ind_output$X7[i]<-paste0(format(round(cva_dva_ind$V12[i]),big.mark=",")," (", format(round(cva_dva_ind$V13[i]),big.mark=","),")")
 }
 
-write.table(cva_dva_ind_output, file="ROutput/cva-dva-ind-output.csv",
+write.table(cva_dva_ind_output, file="ROutput/cva-dva-ind.csv",
             quote=F, sep=";", col.names = F,row.names = F)
 
+# INDEPENDENCE: G2++ QUASI-RANDOM
+
+cva_dva_ind_sobol<-load.matrix(folder, "cvaDvaIndSobol.csv")
+
+cva_dva_ind_sobol_output<-data.frame(matrix(NA,nrow=6,ncol=7))
+
+for(i in 1:dim(cva_dva_ind_sobol)[1]) {
+  cva_dva_ind_sobol_output$X1[i]<-cva_dva_ind_sobol$V1[i]
+  cva_dva_ind_sobol_output$X2[i]<-paste0(format(round(cva_dva_ind_sobol$V2[i]),big.mark = ",")," (", format(round(cva_dva_ind_sobol$V3[i]),big.mark=","),")")
+  cva_dva_ind_sobol_output$X3[i]<-paste0(format(round(cva_dva_ind_sobol$V4[i]),big.mark=",")," (", format(round(cva_dva_ind_sobol$V5[i]),big.mark=","),")")
+  cva_dva_ind_sobol_output$X4[i]<-paste0(format(round(cva_dva_ind_sobol$V6[i]),big.mark=",")," (", format(round(cva_dva_ind_sobol$V7[i]),big.mark=","),")")
+  cva_dva_ind_sobol_output$X5[i]<-paste0(format(round(cva_dva_ind_sobol$V8[i]),big.mark=",")," (", format(round(cva_dva_ind_sobol$V9[i]),big.mark=","),")")
+  cva_dva_ind_sobol_output$X6[i]<-paste0(format(round(cva_dva_ind_sobol$V10[i]),big.mark=",")," (", format(round(cva_dva_ind_sobol$V11[i]),big.mark=","),")")
+  cva_dva_ind_sobol_output$X7[i]<-paste0(format(round(cva_dva_ind_sobol$V12[i]),big.mark=",")," (", format(round(cva_dva_ind_sobol$V13[i]),big.mark=","),")")
+}
+
+write.table(cva_dva_ind_sobol_output, file="ROutput/cva-dva-ind-sobol.csv",
+            quote=F, sep=";", col.names = F,row.names = F)
+
+# INDEPENDENCE: HULL-WHITE PSEUDO-RANDOM
+
+cva_dva_ind_hw<-load.matrix(folder, "cvaDvaIndHw.csv")
+
+cva_dva_ind_hw_output<-data.frame(matrix(NA,nrow=6,ncol=7))
+
+for(i in 1:dim(cva_dva_ind_hw)[1]) {
+  cva_dva_ind_hw_output$X1[i]<-cva_dva_ind_hw$V1[i]
+  cva_dva_ind_hw_output$X2[i]<-paste0(format(round(cva_dva_ind_hw$V2[i]),big.mark = ",")," (", format(round(cva_dva_ind_hw$V3[i]),big.mark=","),")")
+  cva_dva_ind_hw_output$X3[i]<-paste0(format(round(cva_dva_ind_hw$V4[i]),big.mark=",")," (", format(round(cva_dva_ind_hw$V5[i]),big.mark=","),")")
+  cva_dva_ind_hw_output$X4[i]<-paste0(format(round(cva_dva_ind_hw$V6[i]),big.mark=",")," (", format(round(cva_dva_ind_hw$V7[i]),big.mark=","),")")
+  cva_dva_ind_hw_output$X5[i]<-paste0(format(round(cva_dva_ind_hw$V8[i]),big.mark=",")," (", format(round(cva_dva_ind_hw$V9[i]),big.mark=","),")")
+  cva_dva_ind_hw_output$X6[i]<-paste0(format(round(cva_dva_ind_hw$V10[i]),big.mark=",")," (", format(round(cva_dva_ind_hw$V11[i]),big.mark=","),")")
+  cva_dva_ind_hw_output$X7[i]<-paste0(format(round(cva_dva_ind_hw$V12[i]),big.mark=",")," (", format(round(cva_dva_ind_hw$V13[i]),big.mark=","),")")
+}
+
+write.table(cva_dva_ind_hw_output, file="ROutput/cva-dva-ind-hw.csv",
+            quote=F, sep=";", col.names = F,row.names = F)
+
+# WRONG WAY RISK: G2++ PSEUDO-RANDOM
 
 cva_dva_wwr<-load.matrix(folder, "cvaDvaWwr.csv")
 
@@ -784,8 +811,48 @@ for(i in 1:dim(cva_dva_wwr)[1]) {
   cva_dva_wwr_output$X7[i]<-paste0(format(round(cva_dva_wwr$V12[i]),big.mark=",")," (", format(round(cva_dva_wwr$V13[i]),big.mark=","),")")
 }
 
-write.table(cva_dva_wwr_output, file="ROutput/cva-dva-wwr-output.csv",
+write.table(cva_dva_wwr_output, file="ROutput/cva-dva-wwr.csv",
             quote=F, sep=";", col.names = F,row.names = F)
+
+# WRONG WAY RISK: G2++ QUASI-RANDOM
+
+cva_dva_wwr_sobol<-load.matrix(folder, "cvaDvaWwrSobol.csv")
+
+cva_dva_wwr_sobol_output<-data.frame(matrix(NA,nrow=6,ncol=7))
+
+for(i in 1:dim(cva_dva_wwr_sobol)[1]) {
+  cva_dva_wwr_sobol_output$X1[i]<-cva_dva_wwr_sobol$V1[i]
+  cva_dva_wwr_sobol_output$X2[i]<-paste0(format(round(cva_dva_wwr_sobol$V2[i]),big.mark = ",")," (", format(round(cva_dva_wwr_sobol$V3[i]),big.mark=","),")")
+  cva_dva_wwr_sobol_output$X3[i]<-paste0(format(round(cva_dva_wwr_sobol$V4[i]),big.mark=",")," (", format(round(cva_dva_wwr_sobol$V5[i]),big.mark=","),")")
+  cva_dva_wwr_sobol_output$X4[i]<-paste0(format(round(cva_dva_wwr_sobol$V6[i]),big.mark=",")," (", format(round(cva_dva_wwr_sobol$V7[i]),big.mark=","),")")
+  cva_dva_wwr_sobol_output$X5[i]<-paste0(format(round(cva_dva_wwr_sobol$V8[i]),big.mark=",")," (", format(round(cva_dva_wwr_sobol$V9[i]),big.mark=","),")")
+  cva_dva_wwr_sobol_output$X6[i]<-paste0(format(round(cva_dva_wwr_sobol$V10[i]),big.mark=",")," (", format(round(cva_dva_wwr_sobol$V11[i]),big.mark=","),")")
+  cva_dva_wwr_sobol_output$X7[i]<-paste0(format(round(cva_dva_wwr_sobol$V12[i]),big.mark=",")," (", format(round(cva_dva_wwr_sobol$V13[i]),big.mark=","),")")
+}
+
+write.table(cva_dva_wwr_sobol_output, file="ROutput/cva-dva-wwr-sobol.csv",
+            quote=F, sep=";", col.names = F,row.names = F)
+
+# WRONG WAY RISK: HULL-WHITE PSEUDO-RANDOM
+
+cva_dva_wwr_hw<-load.matrix(folder, "cvaDvaWwrHw.csv")
+
+cva_dva_wwr_hw_output<-data.frame(matrix(NA,nrow=6,ncol=7))
+
+for(i in 1:dim(cva_dva_wwr_hw)[1]) {
+  cva_dva_wwr_hw_output$X1[i]<-cva_dva_wwr_hw$V1[i]
+  cva_dva_wwr_hw_output$X2[i]<-paste0(format(round(cva_dva_wwr_hw$V2[i]),big.mark = ",")," (", format(round(cva_dva_wwr_hw$V3[i]),big.mark=","),")")
+  cva_dva_wwr_hw_output$X3[i]<-paste0(format(round(cva_dva_wwr_hw$V4[i]),big.mark=",")," (", format(round(cva_dva_wwr_hw$V5[i]),big.mark=","),")")
+  cva_dva_wwr_hw_output$X4[i]<-paste0(format(round(cva_dva_wwr_hw$V6[i]),big.mark=",")," (", format(round(cva_dva_wwr_hw$V7[i]),big.mark=","),")")
+  cva_dva_wwr_hw_output$X5[i]<-paste0(format(round(cva_dva_wwr_hw$V8[i]),big.mark=",")," (", format(round(cva_dva_wwr_hw$V9[i]),big.mark=","),")")
+  cva_dva_wwr_hw_output$X6[i]<-paste0(format(round(cva_dva_wwr_hw$V10[i]),big.mark=",")," (", format(round(cva_dva_wwr_hw$V11[i]),big.mark=","),")")
+  cva_dva_wwr_hw_output$X7[i]<-paste0(format(round(cva_dva_wwr_hw$V12[i]),big.mark=",")," (", format(round(cva_dva_wwr_hw$V13[i]),big.mark=","),")")
+}
+
+write.table(cva_dva_wwr_hw_output, file="ROutput/cva-dva-wwr-hw.csv",
+            quote=F, sep=";", col.names = F,row.names = F)
+
+# RIGHT WAY RISK: G2++ PSEUDO-RANDOM
 
 cva_dva_rwr<-load.matrix(folder, "cvaDvaRwr.csv")
 
@@ -801,104 +868,44 @@ for(i in 1:dim(cva_dva_rwr)[1]) {
   cva_dva_rwr_output$X7[i]<-paste0(format(round(cva_dva_rwr$V12[i]),big.mark=",")," (", format(round(cva_dva_rwr$V13[i]),big.mark=","),")")
 }
 
-write.table(cva_dva_rwr_output, file="ROutput/cva-dva-rwr-output.csv",
+write.table(cva_dva_rwr_output, file="ROutput/cva-dva-rwr.csv",
             quote=F, sep=";", col.names = F,row.names = F)
 
+# RIGHT WAY RISK: G2++ QUASI-RANDOM
 
+cva_dva_rwr_sobol<-load.matrix(folder, "cvaDvaRwrSobol.csv")
 
-#########################################
-# SOBOL             #
-#########################################
+cva_dva_rwr_sobol_output<-data.frame(matrix(NA,nrow=6,ncol=7))
 
-sobol<-data.table::fread("/Users/mmencke/Documents/GitHub/MasterThesis/DerivedData/Build/Products/Debug/sobol.csv",
-                  header=F,
-                  sep=",")
-
-
-dim(sobol)
-
-#index<-seq(1,1024*250,250)
-
-index<-1025:2048
-
-
-#index<-1:256000
-
-x1<-sobol$V1[index]
-x2<-sobol$V2[index]
-x3<-sobol$V3[index]
-x4<-sobol$V4[index]
-
-
-par(mfrow=c(3,2))
-plot(x1,x2)
-plot(x1,x3)
-plot(x1,x4)
-plot(x2,x3)
-plot(x2,x4)
-plot(x3,x4)
-
-par(mfrow=c(4,1))
-plot(density(x1))
-plot(density(x2))
-plot(density(x3))
-plot(density(x4))
-
-
-
-sobol2<-data.table::fread("/Users/mmencke/Documents/GitHub/MasterThesis/DerivedData/Build/Products/Debug/sobol2.csv",
-                         header=F,
-                         sep=",")
-
-plot(sobol2$V4[index]-sobol$V4[index])
-
-
-wiener<-matrix(NA,nrow=1024,ncol=251)
-
-dt<-1/250
-
-
-k<-1
-
-for(l in 0:1023){
-  wiener[l+1,1]<-0
-  for(i in 0:249){
-    wiener[l+1,i+2]<- wiener[l+1,i+1]+sqrt(dt)*sobol2$V1[k]
-    k<-k+1
-  }
+for(i in 1:dim(cva_dva_rwr_sobol)[1]) {
+  cva_dva_rwr_sobol_output$X1[i]<-cva_dva_rwr_sobol$V1[i]
+  cva_dva_rwr_sobol_output$X2[i]<-paste0(format(round(cva_dva_rwr_sobol$V2[i]),big.mark = ",")," (", format(round(cva_dva_rwr_sobol$V3[i]),big.mark=","),")")
+  cva_dva_rwr_sobol_output$X3[i]<-paste0(format(round(cva_dva_rwr_sobol$V4[i]),big.mark=",")," (", format(round(cva_dva_rwr_sobol$V5[i]),big.mark=","),")")
+  cva_dva_rwr_sobol_output$X4[i]<-paste0(format(round(cva_dva_rwr_sobol$V6[i]),big.mark=",")," (", format(round(cva_dva_rwr_sobol$V7[i]),big.mark=","),")")
+  cva_dva_rwr_sobol_output$X5[i]<-paste0(format(round(cva_dva_rwr_sobol$V8[i]),big.mark=",")," (", format(round(cva_dva_rwr_sobol$V9[i]),big.mark=","),")")
+  cva_dva_rwr_sobol_output$X6[i]<-paste0(format(round(cva_dva_rwr_sobol$V10[i]),big.mark=",")," (", format(round(cva_dva_rwr_sobol$V11[i]),big.mark=","),")")
+  cva_dva_rwr_sobol_output$X7[i]<-paste0(format(round(cva_dva_rwr_sobol$V12[i]),big.mark=",")," (", format(round(cva_dva_rwr_sobol$V13[i]),big.mark=","),")")
 }
 
-par(mfrow=c(1,1))
+write.table(cva_dva_rwr_sobol_output, file="ROutput/cva-dva-rwr-sobol.csv",
+            quote=F, sep=";", col.names = F,row.names = F)
 
-plot(wiener[1,],ylim=c(-2,2))
+# RIGHT WAY RISK: HULL-WHITE PSEUDO-RANDOM
 
+cva_dva_rwr_hw<-load.matrix(folder, "cvaDvaRwrHw.csv")
 
-for(i in 2:1024) {
-  points(wiener[i,],col=i)
+cva_dva_rwr_hw_output<-data.frame(matrix(NA,nrow=6,ncol=7))
+
+for(i in 1:dim(cva_dva_rwr_hw)[1]) {
+  cva_dva_rwr_hw_output$X1[i]<-cva_dva_rwr_hw$V1[i]
+  cva_dva_rwr_hw_output$X2[i]<-paste0(format(round(cva_dva_rwr_hw$V2[i]),big.mark = ",")," (", format(round(cva_dva_rwr_hw$V3[i]),big.mark=","),")")
+  cva_dva_rwr_hw_output$X3[i]<-paste0(format(round(cva_dva_rwr_hw$V4[i]),big.mark=",")," (", format(round(cva_dva_rwr_hw$V5[i]),big.mark=","),")")
+  cva_dva_rwr_hw_output$X4[i]<-paste0(format(round(cva_dva_rwr_hw$V6[i]),big.mark=",")," (", format(round(cva_dva_rwr_hw$V7[i]),big.mark=","),")")
+  cva_dva_rwr_hw_output$X5[i]<-paste0(format(round(cva_dva_rwr_hw$V8[i]),big.mark=",")," (", format(round(cva_dva_rwr_hw$V9[i]),big.mark=","),")")
+  cva_dva_rwr_hw_output$X6[i]<-paste0(format(round(cva_dva_rwr_hw$V10[i]),big.mark=",")," (", format(round(cva_dva_rwr_hw$V11[i]),big.mark=","),")")
+  cva_dva_rwr_hw_output$X7[i]<-paste0(format(round(cva_dva_rwr_hw$V12[i]),big.mark=",")," (", format(round(cva_dva_rwr_hw$V13[i]),big.mark=","),")")
 }
 
-
-wiener2<-matrix(NA,nrow=1024,ncol=251)
-
-for(l in 0:1023){
-  wiener2[l+1,1]<-0
-  for(i in 0:249){
-    wiener2[l+1,i+2]<- wiener2[l+1,i+1]+sqrt(dt)*rnorm(1)
-  }
-}
-
-plot(wiener2[1,],ylim=c(-2,2))
-
-
-for(i in 2:1024) {
-  points(wiener2[i,],col=i)
-}
-
-
-plot(density(wiener2[,251]))
-
-warnings()
-
-plot(w)
-
+write.table(cva_dva_rwr_hw_output, file="ROutput/cva-dva-rwr-hw.csv",
+            quote=F, sep=";", col.names = F,row.names = F)
 

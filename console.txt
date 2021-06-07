@@ -146,38 +146,19 @@ Hull-White: List of Parameters
 | CVA and DVA by Monte Carlo |
 |----------------------------|
 
-Independent: Run time = 123.78 minutes
-Wrong Way Risk: Run time = 121.534 minutes
-Right Way Risk: Run time = 123.549 minutes
+Independent (G2++ Pseudo-Random): Run time = 166.06 minutes
+Independent (G2++ Quasi-Random): Run time = 111.092 minutes
+Independent (Hull-White Pseudo-Random): Run time = 121.876 minutes
+Wrong Way Risk (G2++ Pseudo-Random): Run time = 121.668 minutes
+Wrong Way Risk (G2++ Quasi-Random): Run time = 113.035 minutes
+Wrong Way Risk (Hull-White Pseudo-Random): Run time = 128.263 minutes
+Right Way Risk (G2++ Pseudo-Random): Run time = 127.346 minutes
+Right Way Risk (G2++ Quasi-Random): Run time = 133.314 minutes
+Right Way Risk (Hull-White Pseudo-Random): Run time = 155.215 minutes
 
 |-------------------------------------------------------|
 | Changes in Swap NPV by shifts in the Gaussian Factors |
 |-------------------------------------------------------|
-
-|--------------------------------------|
-| Monte Carlo Sample (Single Maturity) |
-|--------------------------------------|
-
-
-30 49.4 -3.49246e-10 
-
-
-G2++ Pseudo-Random:
-30 25676.6 1185.15 31572.7 2365.78 
-
-Monte Carlo Sample (G2++ Pseudo-Random): Run time = 12.4821 minutes
-
-G2++ Quasi-Random:
-30 24623.6 1168.74 27969.8 2038.29 
-
-Monte Carlo Sample (G2++ Quasi-Random): Run time = 11.8867 minutes
-
-Hull-White Pseudo-Random:
-30 30297.4 1300.08 24395.7 2055.54 
-
-Monte Carlo Sample (Hull-White Pseudo-Random): Run time = 9.76472 minutes
-
-
 
 |--------------------------------------|
 | Monte Carlo Sample (Single Maturity) |
@@ -201,59 +182,5 @@ Hull-White Pseudo-Random:
 30 30084.1 409.754 25452.2 655.514 
 
 Monte Carlo Sample (Hull-White Pseudo-Random): Run time = 91.4305 minutes
-
-
-
-
-|--------------------------------------|
-| Monte Carlo Sample (Single Maturity) |
-|--------------------------------------|
-
-
-30 49.4 -3.49246e-10 
-
-
-G2++ Pseudo-Random:
-30 51043.2 2022.37 61948.3 7136.47 
-
-Monte Carlo Sample (G2++ Pseudo-Random): Run time = 9.78154 minutes
-
-G2++ Quasi-Random:
-30 49717.6 2006.44 60978.5 8690.69 
-
-Monte Carlo Sample (G2++ Quasi-Random): Run time = 10.2087 minutes
-
-Hull-White Pseudo-Random:
-30 47305.1 1953.98 79501.6 9192.81 
-
-Monte Carlo Sample (Hull-White Pseudo-Random): Run time = 11.9459 minutes
-
-
-
-
-
-|--------------------------------------|
-| Monte Carlo Sample (Single Maturity) |
-|--------------------------------------|
-
-
-30 49.4 -3.49246e-10 
-
-
-G2++ Pseudo-Random:
-30 11208.4 609.777 16911 1030.88 
-
-Monte Carlo Sample (G2++ Pseudo-Random): Run time = 10.5033 minutes
-
-G2++ Quasi-Random:
-30 11270.1 620.766 16540.5 993.948 
-
-Monte Carlo Sample (G2++ Quasi-Random): Run time = 9.62021 minutes
-
-Hull-White Pseudo-Random:
-30 20761.1 880.039 8712.67 688.732 
-
-Monte Carlo Sample (Hull-White Pseudo-Random): Run time = 9.87701 minutes
-Program ended with exit code: 0
 
 Program ended with exit code: 0

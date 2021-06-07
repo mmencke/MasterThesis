@@ -334,7 +334,7 @@ inline void mcCva() {
     diff = end - start;
 
     std::cout << "Independent (G2++ Pseudo-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
-    
+ 
     /*******************************************************************/
     /* INDEPENDENCE: G2++ QUASI-RANDOM                                 */
     /*******************************************************************/
@@ -456,7 +456,7 @@ inline void mcCva() {
 
     rho[0][2]=rho[2][0]=-0.05;
     rho[1][2]=rho[2][1]=0.7505596;
-    
+
     start = std::chrono::steady_clock::now();
     Matrix cvaDvaWwr(exmpSwapTenors.size(), 13);
     
@@ -507,7 +507,7 @@ inline void mcCva() {
     diff = end - start;
     
     std::cout << "Wrong Way Risk (G2++ Pseudo-Random): Run time = " << std::chrono::duration <double, std::ratio<60>> (diff).count() << " minutes" << std::endl;
-    
+ 
     /*******************************************************************/
     /* WRONG WAY RISK: G2++ QUASI-RANDOM                               */
     /*******************************************************************/
@@ -572,7 +572,7 @@ inline void mcCva() {
     start = std::chrono::steady_clock::now();
     Matrix cvaDvaWwrHw(exmpSwapTenors.size(),13);
 
-    rhoHw[0][1]=rhoHw[1][0]=1;
+    rhoHw[0][1]=rhoHw[1][0]=0.99;
     
     for(int i=0;i<exmpSwapTenors.size();i++) {
         cvaDvaWwrHw[i][0] = years(exmpSwapTenors[i]);
@@ -744,7 +744,7 @@ inline void mcCva() {
     start = std::chrono::steady_clock::now();
     Matrix cvaDvaRwrHw(exmpSwapTenors.size(), 13);
     
-    rhoHw[0][1]=rhoHw[1][0]=-1;
+    rhoHw[0][1]=rhoHw[1][0]=-0.99;
     
     for(int i=0;i<exmpSwapTenors.size();i++) {
         cvaDvaRwrHw[i][0] = years(exmpSwapTenors[i]);
