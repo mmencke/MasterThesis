@@ -1,6 +1,6 @@
 # MasterThesis
 
-This is the source code for my Master Thesis on Credit Value Adjustment: Pricing Wrong Way Risk on Interest Rate Swaps. It is utilising functionality from QuantLib and works with the [forked repo](https://github.com/mmencke/QuantLib).
+This is the source code for my Master Thesis on Credit Value Adjustment: Pricing Wrong Way Risk on Interest Rate Swaps. It is utilising functionality from QuantLib and works with the [forked repo](https://github.com/mmencke/QuantLib) (the 'MasterThesis'-branch).
 
 The project is build in Xcode 9.2 using version 1.22 of QuantLib and version 1.75.0 of Boost. It is a standard C++ command-line tool with following settings
 
